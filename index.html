@@ -22,6 +22,7 @@
       padding: 0;
       background-color: white;
       text-align: center;
+      padding-top: 90px; /* Add padding to avoid content hiding under the fixed toolbar */
     }
 
     .toolbar {
@@ -32,6 +33,11 @@
       align-items: center;
       padding: 10px 20px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 10; /* Ensure the toolbar stays on top of other content */
     }
 
     .toolbar .logo {
