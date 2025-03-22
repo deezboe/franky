@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Toolbar Template</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+
+    .toolbar {
+      background-color: #333;
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+    }
+
+    .toolbar a {
+      color: white;
+      text-decoration: none;
+      padding: 14px 16px;
+      font-size: 16px;
+    }
+
+    .toolbar a:hover {
+      background-color: #575757;
+    }
+
+    .toolbar .logo {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .toolbar .menu {
+      display: flex;
+    }
+
+    .menu-toggle {
+      display: none;
+      font-size: 24px;
+      color: white;
+      cursor: pointer;
+    }
+
+    @media (max-width: 600px) {
+      .menu {
+        display: none;
+        flex-direction: column;
+        background-color: #333;
+        width: 100%;
+      }
+
+      .menu a {
+        padding: 12px;
+        text-align: center;
+      }
+
+      .menu-toggle {
+        display: block;
+      }
+
+      .menu.active {
+        display: flex;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="logo">MyLogo</div>
+    <div class="menu" id="menu">
+      <a href="#">Home</a>
+      <a href="#">About</a>
+      <a href="#">Services</a>
+      <a href="#">Contact</a>
+    </div>
+    <div class="menu-toggle" id="menu-toggle">
+      <i class="fas fa-bars"></i>
+    </div>
+  </div>
+
+  <script>
+    const menuToggle = document.getElementById('menu-toggle');
+    const menu = document.getElementById('menu');
+
+    menuToggle.addEventListener('click', () => {
+      menu.classList.toggle('active');
+    });
+  </script>
+</body>
+</html>
