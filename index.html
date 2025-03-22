@@ -21,6 +21,7 @@
       margin: 0;
       padding: 0;
       background-color: white;
+      text-align: center;
     }
 
     .toolbar {
@@ -62,9 +63,43 @@
         display: block;
       }
     }
+
+    .header-image-container {
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    .header-image {
+      width: 235px;
+      height: 235px;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .main-title {
+      font-family: 'ComicSansBold', sans-serif;
+      font-size: 80px;
+      margin-top: 20px;
+      color: #333;
+    }
+
+    .subtitle {
+      font-family: 'ComicSans', sans-serif;
+      font-size: 25px;
+      margin-top: 10px;
+      color: #666;
+    }
+
   </style>
 </head>
 <body>
+  <!-- Header Image and Title -->
+  <div class="header-image-container">
+    <img src="Images/frankymilky.png" alt="Frankin' Games" class="header-image" />
+    <div class="main-title">Frankin' Games!</div>
+    <div class="subtitle">the website for premium games.</div>
+  </div>
+
   <div class="toolbar">
     <div class="logo">Frankin' Games</div>
     <div class="date-time" id="date-time">
