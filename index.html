@@ -22,23 +22,24 @@
       padding: 0;
       background-color: white;
       text-align: center;
-      padding-top: 90px; /* Add padding to avoid content hiding under the fixed toolbar */
+      padding-top: 90px;
     }
 
     .toolbar {
       background-color: #f4f4f9;
       overflow: hidden;
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
       padding: 10px 20px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       position: fixed;
       top: 0;
-      left: 10px; /* Move the entire toolbar 10px to the left */
-      width: calc(100% - 10px); /* Adjust width to account for the left margin */
-      z-index: 10; /* Ensure the toolbar stays on top of other content */
+      left: 0;
+      width: 100%;
+      z-index: 10;
       box-sizing: border-box;
+      transform: translateX(-10px); /* Shift everything 10px to the left */
     }
 
     .toolbar .logo {
@@ -46,36 +47,23 @@
       font-size: 24px;
       font-weight: bold;
       color: #333;
-      white-space: nowrap; /* Prevents logo text from breaking into a new line */
-      overflow: hidden;
-      text-overflow: ellipsis; /* If the logo is too long, truncate it */
+      flex: 1;
+      text-align: center;
     }
 
     .toolbar .date-time {
       display: flex;
       align-items: center;
       color: #333;
-      white-space: nowrap; /* Prevents the date/time from wrapping */
+      white-space: nowrap;
+      flex: 1;
+      justify-content: center;
     }
 
     .toolbar .date-time div {
-      margin-right: 15px;
-      white-space: nowrap; /* Prevent date/time content from breaking */
+      margin: 0 10px;
       overflow: hidden;
-      text-overflow: ellipsis; /* Prevent clipping by truncating overflow */
-    }
-
-    .menu-toggle {
-      display: none;
-      font-size: 24px;
-      color: #333;
-      cursor: pointer;
-    }
-
-    @media (max-width: 600px) {
-      .menu-toggle {
-        display: block;
-      }
+      text-overflow: ellipsis;
     }
 
     .header-image-container {
@@ -103,11 +91,9 @@
       margin-top: 10px;
       color: #666;
     }
-
   </style>
 </head>
 <body>
-  <!-- Header Image and Title -->
   <div class="header-image-container">
     <img src="Images/frankymilky.png" alt="Frankin' Games" class="header-image" />
     <div class="main-title">Frankin' Games!</div>
@@ -121,21 +107,13 @@
       <div id="month-day-year"></div>
       <div id="time"></div>
     </div>
-    <div class="menu-toggle" id="menu-toggle">
-      <i class="fas fa-bars"></i>
-    </div>
   </div>
 
   <script>
-    const menuToggle = document.getElementById('menu-toggle');
-    const dateTimeElement = document.getElementById('date-time');
-    
     function updateDateTime() {
       const now = new Date();
-      
       const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-      
       const dayOfWeek = daysOfWeek[now.getDay()];
       const monthDayYear = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
       const time = now.toLocaleTimeString();
@@ -144,9 +122,9 @@
       document.getElementById('month-day-year').textContent = monthDayYear;
       document.getElementById('time').textContent = time;
     }
-    
+
     setInterval(updateDateTime, 1000);
-    updateDateTime();  // Initialize the time on page load
+    updateDateTime();
   </script>
 </body>
 </html>
