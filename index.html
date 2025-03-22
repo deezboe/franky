@@ -38,6 +38,8 @@
       left: 0;
       width: 100%;
       z-index: 10; /* Ensure the toolbar stays on top of other content */
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     .toolbar .logo {
@@ -45,16 +47,23 @@
       font-size: 24px;
       font-weight: bold;
       color: #333;
+      white-space: nowrap; /* Prevents logo text from breaking into a new line */
+      overflow: hidden;
+      text-overflow: ellipsis; /* If the logo is too long, truncate it */
     }
 
     .toolbar .date-time {
       display: flex;
       align-items: center;
       color: #333;
+      white-space: nowrap; /* Prevents the date/time from wrapping */
     }
 
     .toolbar .date-time div {
       margin-right: 15px;
+      white-space: nowrap; /* Prevent date/time content from breaking */
+      overflow: hidden;
+      text-overflow: ellipsis; /* Prevent clipping by truncating overflow */
     }
 
     .menu-toggle {
