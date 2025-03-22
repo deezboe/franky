@@ -23,25 +23,17 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 
-    .toolbar a {
-      color: #333;
-      text-decoration: none;
-      padding: 14px 16px;
-      font-size: 16px;
-    }
-
-    .toolbar a:hover {
-      background-color: #e0e0e0;
-    }
-
     .toolbar .logo {
       font-size: 24px;
       font-weight: bold;
       color: #333;
     }
 
-    .toolbar .menu {
+    .toolbar .date-time {
       display: flex;
+      flex-direction: column;
+      text-align: right;
+      color: #333;
     }
 
     .menu-toggle {
@@ -52,24 +44,8 @@
     }
 
     @media (max-width: 600px) {
-      .menu {
-        display: none;
-        flex-direction: column;
-        background-color: #f4f4f9;
-        width: 100%;
-      }
-
-      .menu a {
-        padding: 12px;
-        text-align: center;
-      }
-
       .menu-toggle {
         display: block;
-      }
-
-      .menu.active {
-        display: flex;
       }
     }
   </style>
@@ -77,11 +53,10 @@
 <body>
   <div class="toolbar">
     <div class="logo">Frankin' Games</div>
-    <div class="menu" id="menu">
-      <a href="#">Home</a>
-      <a href="#">About</a>
-      <a href="#">Services</a>
-      <a href="#">Contact</a>
+    <div class="date-time" id="date-time">
+      <div id="day-of-week"></div>
+      <div id="month-day-year"></div>
+      <div id="time"></div>
     </div>
     <div class="menu-toggle" id="menu-toggle">
       <i class="fas fa-bars"></i>
@@ -90,11 +65,25 @@
 
   <script>
     const menuToggle = document.getElementById('menu-toggle');
-    const menu = document.getElementById('menu');
+    const dateTimeElement = document.getElementById('date-time');
+    
+    function updateDateTime() {
+      const now = new Date();
+      
+      const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      
+      const dayOfWeek = daysOfWeek[now.getDay()];
+      const monthDayYear = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+      const time = now.toLocaleTimeString();
 
-    menuToggle.addEventListener('click', () => {
-      menu.classList.toggle('active');
-    });
+      document.getElementById('day-of-week').textContent = dayOfWeek;
+      document.getElementById('month-day-year').textContent = monthDayYear;
+      document.getElementById('time').textContent = time;
+    }
+    
+    setInterval(updateDateTime, 1000);
+    updateDateTime();  // Initialize the time on page load
   </script>
 </body>
 </html>
