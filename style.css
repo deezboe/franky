@@ -1,0 +1,21 @@
+/* Define the Comic Sans font */
+@font-face {
+    font-family: 'ComicSans';
+    src: url('/Fonts/comicsans.ttf') format('truetype');
+}
+
+/* Define the Comic Sans Bold font */
+@font-face {
+    font-family: 'ComicSans-Bold';
+    src: url('/Fonts/comicsans-bold.ttf') format('truetype');
+}
+
+/* Apply Comic Sans as the default font for the body */
+body {
+    font-family: 'ComicSans', sans-serif;
+}
+
+/* Apply Comic Sans Bold to headers */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'ComicSans-Bold', sans-serif;
+}
