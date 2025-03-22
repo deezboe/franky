@@ -22,14 +22,14 @@
       padding: 0;
       background-color: white;
       text-align: center;
-      padding-top: 90px;
+      padding-top: 90px; /* Add padding to avoid content hiding under the fixed toolbar */
     }
 
     .toolbar {
       background-color: #f4f4f9;
       overflow: hidden;
       display: flex;
-      justify-content: center;
+      justify-content: space-between;
       align-items: center;
       padding: 10px 20px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -39,7 +39,6 @@
       width: 100%;
       z-index: 10;
       box-sizing: border-box;
-      transform: translateX(-10px); /* Shift everything 10px to the left */
     }
 
     .toolbar .logo {
@@ -47,8 +46,10 @@
       font-size: 24px;
       font-weight: bold;
       color: #333;
-      flex: 1;
-      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-left: 5px; /* Move towards the center by 5px */
     }
 
     .toolbar .date-time {
@@ -56,14 +57,27 @@
       align-items: center;
       color: #333;
       white-space: nowrap;
-      flex: 1;
-      justify-content: center;
+      margin-right: 5px; /* Move towards the center by 5px */
     }
 
     .toolbar .date-time div {
-      margin: 0 10px;
+      margin-right: 15px;
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .menu-toggle {
+      display: none;
+      font-size: 24px;
+      color: #333;
+      cursor: pointer;
+    }
+
+    @media (max-width: 600px) {
+      .menu-toggle {
+        display: block;
+      }
     }
 
     .header-image-container {
@@ -91,9 +105,11 @@
       margin-top: 10px;
       color: #666;
     }
+
   </style>
 </head>
 <body>
+  <!-- Header Image and Title -->
   <div class="header-image-container">
     <img src="Images/frankymilky.png" alt="Frankin' Games" class="header-image" />
     <div class="main-title">Frankin' Games!</div>
@@ -107,13 +123,21 @@
       <div id="month-day-year"></div>
       <div id="time"></div>
     </div>
+    <div class="menu-toggle" id="menu-toggle">
+      <i class="fas fa-bars"></i>
+    </div>
   </div>
 
   <script>
+    const menuToggle = document.getElementById('menu-toggle');
+    const dateTimeElement = document.getElementById('date-time');
+    
     function updateDateTime() {
       const now = new Date();
+      
       const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      
       const dayOfWeek = daysOfWeek[now.getDay()];
       const monthDayYear = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
       const time = now.toLocaleTimeString();
@@ -122,9 +146,9 @@
       document.getElementById('month-day-year').textContent = monthDayYear;
       document.getElementById('time').textContent = time;
     }
-
+    
     setInterval(updateDateTime, 1000);
-    updateDateTime();
+    updateDateTime();  // Initialize the time on page load
   </script>
 </body>
 </html>
