@@ -1,11 +1,11 @@
 @font-face {
-  font-family: 'ComicSans';
-  src: url('Fonts/comicsans.ttf') format('truetype');
+  font-family: 'ComicSansBold';
+  src: url('../Fonts/comicsans-bold.ttf') format('truetype');
 }
 
 @font-face {
-  font-family: 'ComicSans-Bold';
-  src: url('Fonts/comicsans-bold.ttf') format('truetype');
+  font-family: 'ComicSans';
+  src: url('../Fonts/comicsans.ttf') format('truetype');
 }
 
 .toolbar {
