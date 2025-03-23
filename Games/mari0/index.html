@@ -6,11 +6,17 @@
     <title>Mari0</title>
 
     <style>
+      /* Remove any default background and margins */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: transparent; /* Ensure no background */
+      }
+
       body {
         font-family: arial;
-        margin: 0;
-        padding: none;
-        background: none !important; /* Remove background only for this page */
+        overflow: hidden; /* Prevent scrollbars */
       }
 
       /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
@@ -18,16 +24,20 @@
         padding-right: 0;
         display: none;
         border: 0px none;
+        background: transparent; /* Ensure the canvas background is transparent */
+      }
+
+      /* The loading canvas background */
+      #loadingCanvas {
+        background: transparent;
       }
     </style>
   </head>
   <body>
-    <center>
-      <div>
-        <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
-        <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="800" height="600"></canvas>
-      </div>
-    </center>
+    <div>
+      <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+      <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="800" height="600"></canvas>
+    </div>
 
     <script type='text/javascript'>
       window.addEventListener("keydown", function(e) {
