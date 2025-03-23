@@ -6,8 +6,18 @@
     <title>Mari0</title>
 
     <style>
+      @font-face {
+        font-family: 'ComicSansBold';
+        src: url('/Fonts/comicsans-bold.ttf') format('truetype');
+      }
+
+      @font-face {
+        font-family: 'ComicSans';
+        src: url('/Fonts/comicsans.ttf') format('truetype');
+      }
+
       body {
-        font-family: arial;
+        font-family: 'ComicSans', Arial, sans-serif;
         margin: 0;
         padding: none;
       }
@@ -17,6 +27,19 @@
         padding-right: 0;
         display: none;
         border: 0px none;
+      }
+
+      h1 {
+        font-family: 'ComicSansBold', sans-serif;
+      }
+
+      p {
+        font-family: 'ComicSans', sans-serif;
+      }
+
+      /* the loading text styles */
+      #loadingCanvas {
+        font-family: 'ComicSans', sans-serif;
       }
     </style>
   </head>
@@ -47,7 +70,7 @@
         loadingContext.fillStyle = 'white';
         loadingContext.fillRect(0, 0, canvas.scrollWidth, canvas.scrollHeight);
 
-        loadingContext.font = '2em arial';
+        loadingContext.font = '2em "ComicSans"';
         loadingContext.textAlign = 'center'
         loadingContext.fillStyle = 'black';
         loadingContext.fillText(text, canvas.scrollWidth / 2, canvas.scrollHeight / 2);
@@ -61,10 +84,7 @@
         printErr: console.error.bind(console),
         canvas: (function() {
           var canvas = document.getElementById('canvas');
-
-          // As a default initial behavior, pop up an alert when webgl context is lost. To make your
-          // application robust, you may want to override this behavior before shipping!
-          // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
+          // As a default initial behavior, pop up an alert when webgl context is lost.
           canvas.addEventListener("webglcontextlost", function(e) { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
 
           return canvas;
@@ -90,7 +110,6 @@
       };
       Module.setStatus('Downloading...');
       window.onerror = function(event) {
-        // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
         Module.setStatus('Exception thrown, see JavaScript console');
         Module.setStatus = function(text) {
           if (text) Module.printErr('[post-exception status] ' + text);
