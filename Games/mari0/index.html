@@ -17,15 +17,61 @@
         display: none;
         border: 0px none;
       }
+
+      .toolbar {
+        background-color: #f4f4f9;
+        overflow: hidden;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 1000;
+      }
+
+      .toolbar .logo {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .toolbar .date-time {
+        font-size: 16px;
+        color: #333;
+      }
+
+      .content {
+        margin-top: 70px;
+      }
     </style>
   </head>
   <body>
-    <center>
-      <div>
-        <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
-        <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="800" height="600"></canvas>
-      </div>
-    </center>
+    <div class="toolbar">
+      <div class="logo">Frankin' Games</div>
+      <div class="date-time" id="date-time"></div>
+    </div>
+
+    <div class="content">
+      <center>
+        <div>
+          <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+          <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="800" height="600"></canvas>
+        </div>
+      </center>
+    </div>
+
+    <script>
+      function updateDateTime() {
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' };
+        document.getElementById('date-time').textContent = now.toLocaleDateString('en-US', options);
+      }
+      setInterval(updateDateTime, 1000);
+      updateDateTime();
+    </script>
 
     <script type='text/javascript'>
       window.addEventListener("keydown", function(e) {
