@@ -8,12 +8,12 @@
     <style>
       @font-face {
         font-family: 'ComicSansBold';
-        src: url('/Fonts/comicsans-bold.ttf') format('truetype');
+        src: url('Fonts/comicsans-bold.ttf') format('truetype');
       }
 
       @font-face {
         font-family: 'ComicSans';
-        src: url('/Fonts/comicsans.ttf') format('truetype');
+        src: url('Fonts/comicsans.ttf') format('truetype');
       }
 
       body {
@@ -22,7 +22,6 @@
         padding: none;
       }
 
-      /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
       #canvas {
         padding-right: 0;
         display: none;
@@ -33,12 +32,7 @@
         font-family: 'ComicSansBold', sans-serif;
       }
 
-      p {
-        font-family: 'ComicSans', sans-serif;
-      }
-
-      /* the loading text styles */
-      #loadingCanvas {
+      p, a {
         font-family: 'ComicSans', sans-serif;
       }
     </style>
@@ -57,7 +51,6 @@
 
     <script type='text/javascript'>
       window.addEventListener("keydown", function(e) {
-        // space and arrow keys
         if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
           e.preventDefault();
         }
@@ -70,11 +63,10 @@
         loadingContext.fillStyle = 'white';
         loadingContext.fillRect(0, 0, canvas.scrollWidth, canvas.scrollHeight);
 
-        loadingContext.font = '2em "ComicSans"';
-        loadingContext.textAlign = 'center'
+        loadingContext.font = '2em ComicSans';
+        loadingContext.textAlign = 'center';
         loadingContext.fillStyle = 'black';
         loadingContext.fillText(text, canvas.scrollWidth / 2, canvas.scrollHeight / 2);
-
         loadingContext.fillText("Powered By Emscripten.", canvas.scrollWidth / 2, canvas.scrollHeight / 4);
         loadingContext.fillText("Powered By LÖVE.", canvas.scrollWidth / 2, canvas.scrollHeight / 4 * 3);
       }
@@ -84,9 +76,10 @@
         printErr: console.error.bind(console),
         canvas: (function() {
           var canvas = document.getElementById('canvas');
-          // As a default initial behavior, pop up an alert when webgl context is lost.
-          canvas.addEventListener("webglcontextlost", function(e) { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
-
+          canvas.addEventListener("webglcontextlost", function(e) {
+            alert('WebGL context lost. You will need to reload the page.');
+            e.preventDefault();
+          }, false);
           return canvas;
         })(),
         memoryInitializerPrefixURL: '../',
@@ -111,9 +104,6 @@
       Module.setStatus('Downloading...');
       window.onerror = function(event) {
         Module.setStatus('Exception thrown, see JavaScript console');
-        Module.setStatus = function(text) {
-          if (text) Module.printErr('[post-exception status] ' + text);
-        };
       };
     </script>
     <script type="text/javascript" src="game.js"></script>
