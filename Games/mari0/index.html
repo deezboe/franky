@@ -12,36 +12,39 @@
         margin: 0;
         padding: 0;
         background: transparent; /* Ensure no background */
+        overflow: hidden; /* Prevent scrollbars */
       }
 
       body {
         font-family: arial;
-        overflow: hidden; /* Prevent scrollbars */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
       }
 
-      /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
+      /* Make canvas fill the entire viewport */
       #canvas {
-        padding-right: 0;
-        display: none;
-        border: 0px none;
-        background: transparent; /* Ensure the canvas background is transparent */
+        display: block; /* Remove any default inline behavior */
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        border: none;
       }
 
-      /* The loading canvas background */
       #loadingCanvas {
-        background: transparent;
+        display: none; /* Hide loading canvas after the game is loaded */
       }
     </style>
   </head>
   <body>
-    <div>
-      <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
-      <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="800" height="600"></canvas>
-    </div>
+    <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="800" height="600"></canvas>
 
     <script type='text/javascript'>
       window.addEventListener("keydown", function(e) {
-        // space and arrow keys
+        // Prevent default action for space and arrow keys
         if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
           e.preventDefault();
         }
@@ -69,10 +72,11 @@
         canvas: (function() {
           var canvas = document.getElementById('canvas');
 
-          // As a default initial behavior, pop up an alert when webgl context is lost. To make your
-          // application robust, you may want to override this behavior before shipping!
-          // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
-          canvas.addEventListener("webglcontextlost", function(e) { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
+          // As a default initial behavior, pop up an alert when WebGL context is lost
+          canvas.addEventListener("webglcontextlost", function(e) { 
+            alert('WebGL context lost. You will need to reload the page.');
+            e.preventDefault(); 
+          }, false);
 
           return canvas;
         })(),
@@ -97,7 +101,6 @@
       };
       Module.setStatus('Downloading...');
       window.onerror = function(event) {
-        // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
         Module.setStatus('Exception thrown, see JavaScript console');
         Module.setStatus = function(text) {
           if (text) Module.printErr('[post-exception status] ' + text);
