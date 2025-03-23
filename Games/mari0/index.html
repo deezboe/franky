@@ -13,23 +13,18 @@
         padding: 0;
         background: transparent; /* Ensure no background */
         overflow: hidden; /* Prevent scrollbars */
-      }
-
-      body {
-        font-family: arial;
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
-        margin: 0;
       }
 
-      /* Canvas style */
+      /* Lock the canvas to a specific size and ensure no stretch */
       #canvas {
-        display: block; /* Remove any default inline behavior */
-        background: transparent;
-        border: none;
-        margin: 0;
+        width: 800px;  /* Fixed width */
+        height: 448px; /* Fixed height */
+        background-color: black;
+        display: block;
+        cursor: default; /* Disable mouse cursor change */
       }
 
       #loadingCanvas {
@@ -39,33 +34,9 @@
   </head>
   <body>
     <canvas id="canvas" oncontextmenu="event.preventDefault()" width="800" height="448" style="cursor: default; background-color: black; display: block;"></canvas>
-    <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="1669" height="953"></canvas>
+    <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="800" height="600"></canvas>
 
     <script type='text/javascript'>
-      // Lock canvas to a fixed aspect ratio (1669x953)
-      function resizeCanvas() {
-        var canvas = document.getElementById('canvas');
-        var aspectRatio = 1669 / 953; // Aspect ratio of 1669x953
-        var windowWidth = window.innerWidth;
-        var windowHeight = window.innerHeight;
-
-        // Scale the canvas to fit within the window while keeping the aspect ratio
-        var newWidth = windowWidth;
-        var newHeight = windowWidth / aspectRatio;
-
-        if (newHeight > windowHeight) {
-          newHeight = windowHeight;
-          newWidth = windowHeight * aspectRatio;
-        }
-
-        // Set the canvas width and height to fit the window with the fixed aspect ratio
-        canvas.width = newWidth;
-        canvas.height = newHeight;
-      }
-
-      window.addEventListener('resize', resizeCanvas); // Resize canvas on window resize
-      window.addEventListener('load', resizeCanvas);   // Set canvas size on page load
-
       window.addEventListener("keydown", function(e) {
         // Prevent default action for space and arrow keys
         if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
