@@ -29,6 +29,8 @@
         display: block; /* Remove any default inline behavior */
         background: transparent;
         border: none;
+        width: 1270px;
+        height: 953px;
       }
 
       #loadingCanvas {
@@ -41,30 +43,6 @@
     <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="1270" height="953"></canvas>
 
     <script type='text/javascript'>
-      // Set the canvas size based on window size while maintaining aspect ratio
-      function resizeCanvas() {
-        var canvas = document.getElementById('canvas');
-        var aspectRatio = 1270 / 953; // New aspect ratio of the game canvas
-        var windowWidth = window.innerWidth;
-        var windowHeight = window.innerHeight;
-
-        // Calculate the new dimensions of the canvas to maintain aspect ratio
-        var newWidth = windowWidth;
-        var newHeight = windowWidth / aspectRatio;
-
-        if (newHeight > windowHeight) {
-          newHeight = windowHeight;
-          newWidth = windowHeight * aspectRatio;
-        }
-
-        // Set the canvas size
-        canvas.width = newWidth;
-        canvas.height = newHeight;
-      }
-
-      window.addEventListener('resize', resizeCanvas); // Resize canvas on window resize
-      window.addEventListener('load', resizeCanvas);   // Set canvas size on page load
-
       window.addEventListener("keydown", function(e) {
         // Prevent default action for space and arrow keys
         if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
