@@ -6,18 +6,8 @@
     <title>Mari0</title>
 
     <style>
-      @font-face {
-        font-family: 'ComicSansBold';
-        src: url('Fonts/comicsans-bold.ttf') format('truetype');
-      }
-
-      @font-face {
-        font-family: 'ComicSans';
-        src: url('Fonts/comicsans.ttf') format('truetype');
-      }
-
       body {
-        font-family: 'ComicSans', Arial, sans-serif;
+        font-family: Arial, sans-serif;
         margin: 0;
         padding: none;
       }
@@ -29,11 +19,11 @@
       }
 
       h1 {
-        font-family: 'ComicSansBold', sans-serif;
+        font-family: Arial, sans-serif;
       }
 
       p, a {
-        font-family: 'ComicSans', sans-serif;
+        font-family: Arial, sans-serif;
       }
     </style>
   </head>
@@ -63,7 +53,7 @@
         loadingContext.fillStyle = 'white';
         loadingContext.fillRect(0, 0, canvas.scrollWidth, canvas.scrollHeight);
 
-        loadingContext.font = '2em ComicSans';
+        loadingContext.font = '2em Arial';
         loadingContext.textAlign = 'center';
         loadingContext.fillStyle = 'black';
         loadingContext.fillText(text, canvas.scrollWidth / 2, canvas.scrollHeight / 2);
