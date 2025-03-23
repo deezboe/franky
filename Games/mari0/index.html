@@ -24,11 +24,12 @@
         margin: 0;
       }
 
-      /* the canvas must not have any border or padding */
+      /* Canvas style */
       #canvas {
         display: block; /* Remove any default inline behavior */
         background: transparent;
         border: none;
+        margin: 0;
       }
 
       #loadingCanvas {
@@ -41,14 +42,14 @@
     <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="800" height="600"></canvas>
 
     <script type='text/javascript'>
-      // Set the canvas size based on window size while maintaining the aspect ratio (1669x953)
+      // Lock canvas to a fixed aspect ratio (1669x953)
       function resizeCanvas() {
         var canvas = document.getElementById('canvas');
-        var aspectRatio = 1669 / 953; // New aspect ratio of the game canvas
+        var aspectRatio = 1669 / 953; // Aspect ratio of 1669x953
         var windowWidth = window.innerWidth;
         var windowHeight = window.innerHeight;
 
-        // Calculate the new dimensions of the canvas to maintain aspect ratio
+        // Scale the canvas to fit within the window while keeping the aspect ratio
         var newWidth = windowWidth;
         var newHeight = windowWidth / aspectRatio;
 
@@ -57,7 +58,7 @@
           newWidth = windowHeight * aspectRatio;
         }
 
-        // Set the canvas size
+        // Set the canvas width and height to fit the window with the fixed aspect ratio
         canvas.width = newWidth;
         canvas.height = newHeight;
       }
