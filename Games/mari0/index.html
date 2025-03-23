@@ -1,67 +1,7 @@
 <!doctype html>
-<html lang="en-us">
-<head>
-  <meta charset="utf-8">
-  <title>Mari0 - LÖVE Loader</title>
-  <style>
-    body {
-      font-family: arial;
-      margin: 0;
-      background-color: black;
-    }
-    #canvas {
-      display: none;
-      border: none;
-    }
-    #loadingCanvas {
-      background-color: white;
-    }
-  </style>
-</head>
-<body>
-  <center>
-    <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
-    <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="800" height="600"></canvas>
-  </center>
-
-  <script>
-    const loadingContext = document.getElementById('loadingCanvas').getContext('2d');
-
-    function drawLoadingText(text) {
-      const canvas = loadingContext.canvas;
-      loadingContext.fillStyle = 'white';
-      loadingContext.fillRect(0, 0, canvas.width, canvas.height);
-      loadingContext.font = '2em arial';
-      loadingContext.textAlign = 'center';
-      loadingContext.fillStyle = 'black';
-      loadingContext.fillText(text, canvas.width / 2, canvas.height / 2);
-    }
-
-    const Module = {
-      arguments: ['./'],
-      canvas: document.getElementById('canvas'),
-      setStatus: function(text) {
-        drawLoadingText(text || 'Loading...');
-        if (!text && Module.remainingDependencies === 0) {
-          document.getElementById('loadingCanvas').style.display = 'none';
-          document.getElementById('canvas').style.display = 'block';
-          Module.callMain(Module.arguments);
-        }
-      },
-      monitorRunDependencies: function(left) {
-        Module.remainingDependencies = left;
-        Module.setStatus(left ? `Preparing... (${left} remaining)` : 'Starting Game...');
-      }
-    };
-
-    Module.setStatus('Downloading...');
-
-    window.addEventListener("error", () => {
-      Module.setStatus('An error occurred. Check the console for details.');
-    });
-
-  </script>
-  <script src="game.js"></script>
-  <script async src="../love.js"></script>
-</body>
+<html>
+  <head>
+    <script type="text/javascript" src="game.js"></script>
+    <script async type="text/javascript" src="../love.js"></script>
+  </head>
 </html>
