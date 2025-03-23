@@ -6,6 +6,15 @@
     <title></title>
 
     <style>
+      @font-face {
+        font-family: 'ComicSans';
+        src: url('../Fonts/comicsans.ttf') format('truetype');
+      }
+      @font-face {
+        font-family: 'ComicSans-Bold';
+        src: url('../Fonts/comicsans-bold.ttf') format('truetype');
+      }
+
       body {
         font-family: Arial, sans-serif;
         margin: 0;
@@ -30,12 +39,14 @@
         top: 0;
         width: 100%;
         z-index: 1000;
+        font-family: 'ComicSans', sans-serif;
       }
 
       .toolbar .logo {
         font-size: 24px;
         font-weight: bold;
         color: #333;
+        font-family: 'ComicSans-Bold', sans-serif;
       }
 
       .toolbar .date-time {
