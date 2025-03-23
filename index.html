@@ -139,7 +139,7 @@
       const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
       
       const dayOfWeek = daysOfWeek[now.getDay()];
-      const monthDayYear = ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()};
+      const monthDayYear = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
       const time = now.toLocaleTimeString();
 
       document.getElementById('day-of-week').textContent = dayOfWeek;
