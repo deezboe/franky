@@ -21,7 +21,7 @@
       margin: 0;
       padding: 0;
       background-color: white;
-      padding-top: 90px;
+      padding-top: 90px; /* Prevent content from hiding under the fixed toolbar */
       text-align: center;
     }
 
@@ -60,6 +60,19 @@
       white-space: nowrap;
     }
 
+    .menu-toggle {
+      display: none;
+      font-size: 24px;
+      color: #333;
+      cursor: pointer;
+    }
+
+    @media (max-width: 600px) {
+      .menu-toggle {
+        display: block;
+      }
+    }
+
     .game-section {
       margin-top: 40px;
     }
@@ -70,18 +83,10 @@
       color: #333;
     }
 
-    iframe {
-      margin-top: 20px;
-      width: 1669px;
-      height: 953px;
-      border: none;
-    }
-
     .game-subtitle, .game-link {
       font-family: 'ComicSans', sans-serif;
       font-size: 20px;
       color: #666;
-      margin-top: 20px;
     }
 
     .game-link a {
@@ -91,6 +96,10 @@
 
     .game-link a:hover {
       text-decoration: underline;
+    }
+
+    iframe {
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -102,13 +111,16 @@
       <div id="month-day-year"></div>
       <div id="time"></div>
     </div>
+    <div class="menu-toggle" id="menu-toggle">
+      <i class="fas fa-bars"></i>
+    </div>
   </div>
 
   <div class="game-section">
     <div class="game-title">Mari0</div>
-    <iframe src="https://deezboe.github.io/franky/Games/mari0/game.html" allowfullscreen></iframe>
     <div class="game-subtitle">By Stabyourself.net</div>
     <div class="game-link"><a href="https://stabyourself.net/mari0/" target="_blank">Original Download Page</a></div>
+    <iframe id="mari0" src="https://deezboe.github.io/franky/Games/mari0/game.html" name="mari0" width="1669" height="953" frameborder="0" marginheight="0" scrolling="no"></iframe>
   </div>
 
   <script>
