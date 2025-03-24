@@ -52,6 +52,11 @@
       margin-left: 5px; /* Move towards the center by 5px */
     }
 
+    .toolbar .logo a {
+      text-decoration: none; /* Remove underline */
+      color: #333; /* Keep the text color same as the toolbar */
+    }
+
     .toolbar .date-time {
       display: flex;
       align-items: center;
@@ -117,12 +122,17 @@
   </div>
 
   <div class="toolbar">
-    <div class="logo">Frankin' Games</div>
+    <!-- Clickable Frankin' Games on the Toolbar -->
+    <div class="logo">
+      <a href="/">Frankin' Games</a> <!-- Link to homepage -->
+    </div>
+    
     <div class="date-time" id="date-time">
       <div id="day-of-week"></div>
       <div id="month-day-year"></div>
       <div id="time"></div>
     </div>
+    
     <div class="menu-toggle" id="menu-toggle">
       <i class="fas fa-bars"></i>
     </div>
