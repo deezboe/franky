@@ -8,12 +8,12 @@
   <style>
     @font-face {
       font-family: 'ComicSansBold';
-      src: url('../Fonts/comicsans-bold.ttf') format('truetype');
+      src: url('Fonts/comicsans-bold.ttf') format('truetype');
     }
 
     @font-face {
       font-family: 'ComicSans';
-      src: url('../Fonts/comicsans.ttf') format('truetype');
+      src: url('Fonts/comicsans.ttf') format('truetype');
     }
 
     body {
@@ -21,7 +21,8 @@
       margin: 0;
       padding: 0;
       background-color: white;
-      padding-top: 90px; /* Prevent content from hiding under the fixed toolbar */
+      padding-top: 90px;
+      text-align: center;
     }
 
     .toolbar {
@@ -71,6 +72,36 @@
         display: block;
       }
     }
+
+    .game-title {
+      font-family: 'ComicSansBold', sans-serif;
+      font-size: 40px;
+      margin-top: 40px;
+      color: #333;
+    }
+
+    .game-frame {
+      width: 800px;
+      height: 600px;
+      border: none;
+      margin-top: 20px;
+    }
+
+    .game-info {
+      margin-top: 20px;
+      font-family: 'ComicSans', sans-serif;
+      font-size: 18px;
+      color: #666;
+    }
+
+    .game-info a {
+      color: #007acc;
+      text-decoration: none;
+    }
+
+    .game-info a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -85,6 +116,10 @@
       <i class="fas fa-bars"></i>
     </div>
   </div>
+
+  <div class="game-title">Mari0</div>
+  <iframe class="game-frame" src="https://deezboe.github.io/franky/Games/mari0/game.html" title="Mari0"></iframe>
+  <div class="game-info">By Stabyourself.net, <a href="https://stabyourself.net/mari0/" target="_blank">Original Download Page</a></div>
 
   <script>
     function updateDateTime() {
