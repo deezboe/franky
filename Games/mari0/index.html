@@ -97,6 +97,12 @@
     .game-link a:hover {
       text-decoration: underline;
     }
+
+    #canvas, #loadingCanvas {
+      padding-right: 0;
+      display: none;
+      border: 0px none;
+    }
   </style>
 </head>
 <body>
@@ -107,15 +113,19 @@
       <div id="month-day-year"></div>
       <div id="time"></div>
     </div>
-    <div class="menu-toggle" id="menu-toggle">
-      <i class="fas fa-bars"></i>
-    </div>
   </div>
 
   <div class="game-section">
     <div class="game-title">Mari0</div>
     <div class="game-subtitle">By Stabyourself.net</div>
     <div class="game-link"><a href="https://stabyourself.net/mari0/" target="_blank">Original Download Page</a></div>
+
+    <center>
+      <div>
+        <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+        <canvas id="loadingCanvas" oncontextmenu="event.preventDefault()" width="800" height="600"></canvas>
+      </div>
+    </center>
   </div>
 
   <script>
@@ -135,5 +145,8 @@
     setInterval(updateDateTime, 1000);
     updateDateTime();
   </script>
+
+  <script type="text/javascript" src="game.js"></script>
+  <script async type="text/javascript" src="../love.js"></script>
 </body>
 </html>
