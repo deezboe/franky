@@ -39,12 +39,6 @@
             font-size: 12px;
             cursor: pointer;
         }
-        .upload-section {
-            margin-top: 20px;
-        }
-        .file-input {
-            margin-top: 10px;
-        }
     </style>
 </head>
 <body>
@@ -60,13 +54,6 @@
         <ul id="indexeddb-list">
             <!-- IndexedDB data will be displayed here -->
         </ul>
-    </section>
-
-    <section class="upload-section">
-        <h2>Upload a File</h2>
-        <input type="file" id="file-input" class="file-input">
-        <button id="upload-btn">Upload File</button>
-        <p id="upload-status"></p>
     </section>
 
     <script>
@@ -225,30 +212,6 @@
                     };
                 }
             }
-        }
-
-        // File upload functionality
-        document.getElementById('upload-btn').onclick = function() {
-            const fileInput = document.getElementById('file-input');
-            const file = fileInput.files[0];
-
-            if (!file) {
-                document.getElementById('upload-status').textContent = "No file selected.";
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const fileContent = event.target.result;
-                document.getElementById('upload-status').textContent = "File uploaded successfully! Content preview: " + fileContent.slice(0, 100) + "..."; // Display first 100 chars of content
-                console.log(fileContent); // You can handle the file content here as needed
-            };
-
-            reader.onerror = function() {
-                document.getElementById('upload-status').textContent = "Error reading file.";
-            };
-
-            reader.readAsText(file);
         }
     </script>
 </body>
