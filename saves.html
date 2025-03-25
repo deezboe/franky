@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File & Cookie Manager</title>
+    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+    <script src="main.js" defer></script>
+    <script src="js/edit-data.js" defer></script>
+    <link rel="stylesheet" type="text/css" href="/fonts/fonts.css">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #141414; /* Set your background color */
+            color: white;
+        }
+
+        .selected {
+            background-color: var(--secondary-color) !important;
+            color: var(--primary-color) !important;
+            text-decoration: underline !important;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color) !important;
+            color: var(--primary-color) !important;
+        }
+
+        #fileList,
+        #cookieList {
+            margin: 10px;
+            list-style-type: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            width: calc(100% - 20px);
+        }
+
+        #fileList li,
+        #cookieList li {
+            color: white;
+            text-shadow: 0px 0px 4px black;
+            width: calc(33.33% - 20px);
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        h2 {
+            margin: 10px;
+            color: white;
+            text-shadow: 0px 0px 4px black;
+            font-size: 20px;
+            margin-top: 30px;
+        }
+
+        button {
+            font-family: "M Plus Rounded 1c", sans-serif;
+            padding: 5px 10px;
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            font-size: 110%;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .search-bar {
+            margin: 10px;
+            padding: 5px;
+            font-size: 14px;
+            border: 2px solid #888;
+            border-radius: 5px;
+            background-color: #222;
+            color: white;
+        }
+
+        /* Container for the buttons */
+        #buttonContainer {
+            position: fixed;
+            bottom: 10px;
+            left: 0px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        #deleteSelected, #downloadSelected {
+            box-shadow: 0px 0px 7px #000;
+            font-size: 18px;
+            width: 220px;
+            height: 60px;
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        #deleteSelected:hover, #downloadSelected:hover {
+            background-color: var(--primary-color);
+            color: var(--secondary-color);
+        }
+
+    </style>
+</head>
+
+<body>
+    <div id="navbar-container"></div>
+
+    <br>
+    <a href="#cookieSection" class="skip-button">Skip to Cookies</a>
+    <br><br>
+
+    <form id="uploadForm" style="color: white;">
+        <input type="file" id="fileInput" />
+        <button type="submit">Upload</button>
+    </form>
+
+    <button id="selectAll">Select All</button>
+
+    <h2>Local Storage</h2>
+    <input type="text" id="localSearch" class="search-bar" placeholder="Search Local Storage...">
+    <ul id="fileList"></ul>
+
+    <h2 id="cookieSection">Cookies</h2>
+    <input type="text" id="cookieSearch" class="search-bar" placeholder="Search Cookies...">
+    <ul id="cookieList"></ul>
+
+    <div id="buttonContainer">
+        <button id="deleteSelected">Delete Selected</button>
+        <button id="downloadSelected">Download Selected</button>
+    </div>
+
+    <script>
+        document.getElementById("deleteSelected").addEventListener("click", function () {
+            // Delete selected files and cookies
+            const fileCheckboxes = document.querySelectorAll('#fileList input[type="checkbox"]:checked');
+            const cookieCheckboxes = document.querySelectorAll('#cookieList input[type="checkbox"]:checked');
+            
+            const totalSelected = fileCheckboxes.length + cookieCheckboxes.length;
+            if (totalSelected === 0) {
+                alert("No items selected for deletion.");
+                return;
+            }
+
+            const confirmationMessage = `Are you sure you want to delete ${totalSelected} item(s)?`;
+            if (confirm(confirmationMessage)) {
+                fileCheckboxes.forEach(checkbox => {
+                    const key = checkbox.nextSibling.textContent;
+                    localStorage.removeItem(key);
+                    checkbox.parentElement.remove();
+                });
+
+                cookieCheckboxes.forEach(checkbox => {
+                    const name = checkbox.nextSibling.textContent;
+                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+                    checkbox.parentElement.remove();
+                });
+            }
+        });
+
+        document.getElementById("downloadSelected").addEventListener("click", function () {
+            const fileCheckboxes = document.querySelectorAll('#fileList input[type="checkbox"]:checked');
+            const cookieCheckboxes = document.querySelectorAll('#cookieList input[type="checkbox"]:checked');
+            
+            const totalSelected = fileCheckboxes.length + cookieCheckboxes.length;
+            if (totalSelected === 0) {
+                alert("No items selected for download.");
+                return;
+            }
+
+            // Handle file download
+            fileCheckboxes.forEach(checkbox => {
+                const key = checkbox.nextSibling.textContent;
+                const fileContent = localStorage.getItem(key);
+                
+                const blob = new Blob([fileContent], { type: "text/plain" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = key;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            // Handle cookie download
+            cookieCheckboxes.forEach(checkbox => {
+                const name = checkbox.nextSibling.textContent;
+                const cookieContent = getCookie(name);
+                
+                const blob = new Blob([cookieContent], { type: "text/plain" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        });
+
+        function getCookie(name) {
+            const cookie = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+            return cookie ? cookie.split('=')[1] : null;
+        }
+
+        function createFileListItem(key, value) {
+            const listItem = document.createElement("li");
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            listItem.appendChild(checkbox);
+            listItem.appendChild(document.createTextNode(`${key}`));
+            return listItem;
+        }
+
+        function createCookieListItem(name) {
+            const listItem = document.createElement("li");
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            listItem.appendChild(checkbox);
+            listItem.appendChild(document.createTextNode(`${name}`));
+            return listItem;
+        }
+
+        function displayLocalStorage() {
+            fileList.innerHTML = "";
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                fileList.appendChild(createFileListItem(key, value));
+            }
+        }
+
+        function displayCookies() {
+            cookieList.innerHTML = "";
+            const cookies = document.cookie.split('; ');
+            cookies.forEach(cookie => {
+                const name = cookie.split('=')[0];
+                cookieList.appendChild(createCookieListItem(name));
+            });
+        }
+
+        displayLocalStorage();
+        displayCookies();
+    </script>
+</body>
+
+</html>
