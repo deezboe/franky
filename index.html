@@ -22,7 +22,7 @@
       padding: 0;
       background-color: white;
       text-align: center;
-      padding-top: 90px;
+      padding-top: 110px; /* Increased to accommodate larger toolbar */
     }
 
     .toolbar {
@@ -31,7 +31,7 @@
       display: grid;
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      padding: 10px 20px;
+      padding: 15px 20px; /* Increased padding */
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       position: fixed;
       top: 0;
@@ -39,6 +39,7 @@
       width: 100%;
       z-index: 1000;
       box-sizing: border-box;
+      height: 80px; /* Increased toolbar height */
     }
 
     .toolbar-left {
@@ -65,7 +66,7 @@
 
     .toolbar .logo {
       font-family: 'ComicSansBold', sans-serif;
-      font-size: 24px;
+      font-size: 28px; /* Slightly larger */
       font-weight: bold;
       color: #333;
       white-space: nowrap;
@@ -86,6 +87,7 @@
       white-space: nowrap;
       overflow: hidden;
       margin-left: auto;
+      font-size: 18px; /* Slightly larger */
     }
 
     .toolbar .date-time div {
@@ -97,36 +99,37 @@
 
     .menu-toggle {
       display: none;
-      font-size: 24px;
+      font-size: 28px; /* Slightly larger */
       color: #333;
       cursor: pointer;
       margin-left: 15px;
     }
 
-    /* Search Bar Styles */
+    /* Search Bar Styles - 25% larger */
     .search-container {
       position: relative;
       width: 100%;
-      max-width: 400px;
-      min-width: 200px;
+      max-width: 500px; /* Increased from 400px */
+      min-width: 250px; /* Increased from 200px */
       margin: 0 auto;
     }
 
     #searchInput {
       width: 100%;
-      padding: 8px 15px;
+      padding: 12px 20px; /* Increased padding (from 8px 15px) */
       font-family: "ComicSans", sans-serif;
-      font-size: 16px;
+      font-size: 20px; /* Increased from 16px */
       border: 2px solid #ccc;
-      border-radius: 20px;
+      border-radius: 25px; /* Slightly more rounded */
       outline: none;
       transition: all 0.3s;
       box-sizing: border-box;
+      height: 50px; /* Fixed height for consistency */
     }
 
     #searchInput:focus {
       border-color: #666;
-      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      box-shadow: 0 0 8px rgba(0,0,0,0.2); /* Slightly stronger shadow */
     }
 
     #searchResults {
@@ -142,10 +145,11 @@
       overflow-y: auto;
       display: none;
       z-index: 1100;
+      font-size: 18px; /* Slightly larger text in results */
     }
 
     .search-result-item {
-      padding: 10px;
+      padding: 12px 15px; /* Increased padding */
       text-align: left;
       border-bottom: 1px solid #eee;
       cursor: pointer;
@@ -158,7 +162,8 @@
     @media (max-width: 768px) {
       .toolbar {
         grid-template-columns: auto 1fr auto;
-        padding: 10px 15px;
+        padding: 15px;
+        height: auto; /* Flexible height on mobile */
       }
       
       .toolbar-left {
@@ -168,7 +173,7 @@
       .toolbar-center {
         grid-column: 1 / span 3;
         grid-row: 2;
-        margin-top: 10px;
+        margin-top: 15px;
       }
       
       .toolbar-right {
@@ -188,19 +193,26 @@
         grid-column: 1 / span 3;
         grid-row: 3;
         justify-content: center;
-        margin-top: 10px;
+        margin-top: 15px;
         width: 100%;
+        font-size: 16px; /* Slightly smaller on mobile */
+      }
+      
+      #searchInput {
+        font-size: 18px; /* Slightly smaller on mobile */
+        padding: 10px 15px;
       }
       
       #searchResults {
         width: calc(100vw - 30px);
         left: 50%;
         transform: translateX(-50%);
+        font-size: 16px; /* Slightly smaller on mobile */
       }
     }
 
     .header-image-container {
-      margin-top: 30px;
+      margin-top: 40px; /* Increased margin */
       text-align: center;
     }
 
@@ -214,14 +226,14 @@
     .main-title {
       font-family: 'ComicSansBold', sans-serif;
       font-size: 80px;
-      margin-top: 20px;
+      margin-top: 30px; /* Increased margin */
       color: #333;
     }
 
     .subtitle {
       font-family: 'ComicSans', sans-serif;
       font-size: 25px;
-      margin-top: 10px;
+      margin-top: 15px; /* Increased margin */
       color: #666;
     }
   </style>
