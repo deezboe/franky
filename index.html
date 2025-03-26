@@ -27,7 +27,7 @@
 
     .toolbar {
       background-color: #f4f4f9;
-      overflow: hidden;
+      overflow: visible; /* Changed from hidden to visible */
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -37,7 +37,7 @@
       top: 0;
       left: 0;
       width: 100%;
-      z-index: 10;
+      z-index: 1000; /* Increased z-index */
       box-sizing: border-box;
       gap: 20px;
     }
@@ -46,6 +46,7 @@
       display: flex;
       align-items: center;
       min-width: 200px;
+      z-index: 1001; /* Ensure these stay above */
     }
 
     .toolbar-center {
@@ -53,6 +54,7 @@
       display: flex;
       justify-content: center;
       min-width: 0;
+      position: relative;
     }
 
     .toolbar .logo {
@@ -119,17 +121,17 @@
 
     #searchResults {
       position: absolute;
-      top: 100%;
+      top: calc(100% + 10px); /* Position below the toolbar */
       left: 0;
       width: 100%;
       background-color: white;
       border: 1px solid #ddd;
-      border-radius: 0 0 5px 5px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      border-radius: 5px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       max-height: 300px;
       overflow-y: auto;
       display: none;
-      z-index: 100;
+      z-index: 1100; /* Higher than toolbar */
     }
 
     .search-result-item {
@@ -175,6 +177,12 @@
         justify-content: center;
         margin-top: 10px;
         order: 4;
+      }
+      
+      #searchResults {
+        top: calc(100% + 5px);
+        width: calc(100% - 20px);
+        left: 10px;
       }
     }
 
@@ -301,7 +309,7 @@
     
     // Hide search results when clicking outside
     document.addEventListener('click', function(e) {
-      if (!searchContainer.contains(e.target)) {
+      if (!searchContainer.contains(e.target) && e.target !== searchInput) {
         searchResults.style.display = 'none';
       }
     });
