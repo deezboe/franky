@@ -27,9 +27,9 @@
 
     .toolbar {
       background-color: #f4f4f9;
-      overflow: visible; /* Changed from hidden to visible */
-      display: flex;
-      justify-content: space-between;
+      overflow: visible;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
       padding: 10px 20px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -37,24 +37,30 @@
       top: 0;
       left: 0;
       width: 100%;
-      z-index: 1000; /* Increased z-index */
+      z-index: 1000;
       box-sizing: border-box;
-      gap: 20px;
     }
 
-    .toolbar-left, .toolbar-right {
+    .toolbar-left {
       display: flex;
+      justify-content: flex-start;
       align-items: center;
-      min-width: 200px;
-      z-index: 1001; /* Ensure these stay above */
+      min-width: 0;
     }
 
     .toolbar-center {
-      flex: 1;
       display: flex;
       justify-content: center;
-      min-width: 0;
+      align-items: center;
+      width: 100%;
       position: relative;
+    }
+
+    .toolbar-right {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      min-width: 0;
     }
 
     .toolbar .logo {
@@ -65,6 +71,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-right: auto;
     }
 
     .toolbar .logo a {
@@ -78,6 +85,7 @@
       color: #333;
       white-space: nowrap;
       overflow: hidden;
+      margin-left: auto;
     }
 
     .toolbar .date-time div {
@@ -92,6 +100,7 @@
       font-size: 24px;
       color: #333;
       cursor: pointer;
+      margin-left: 15px;
     }
 
     /* Search Bar Styles */
@@ -99,7 +108,8 @@
       position: relative;
       width: 100%;
       max-width: 400px;
-      min-width: 150px;
+      min-width: 200px;
+      margin: 0 auto;
     }
 
     #searchInput {
@@ -121,7 +131,7 @@
 
     #searchResults {
       position: absolute;
-      top: calc(100% + 10px); /* Position below the toolbar */
+      top: calc(100% + 10px);
       left: 0;
       width: 100%;
       background-color: white;
@@ -131,7 +141,7 @@
       max-height: 300px;
       overflow-y: auto;
       display: none;
-      z-index: 1100; /* Higher than toolbar */
+      z-index: 1100;
     }
 
     .search-result-item {
@@ -147,24 +157,26 @@
 
     @media (max-width: 768px) {
       .toolbar {
-        flex-wrap: wrap;
-        padding: 10px;
+        grid-template-columns: auto 1fr auto;
+        padding: 10px 15px;
       }
       
-      .toolbar-left, .toolbar-right {
-        min-width: auto;
-        flex: 1;
+      .toolbar-left {
+        grid-column: 1;
       }
       
       .toolbar-center {
-        order: 3;
-        width: 100%;
+        grid-column: 1 / span 3;
+        grid-row: 2;
         margin-top: 10px;
+      }
+      
+      .toolbar-right {
+        grid-column: 3;
       }
       
       .menu-toggle {
         display: block;
-        margin-left: auto;
       }
       
       .date-time {
@@ -173,16 +185,17 @@
       
       .toolbar.active .date-time {
         display: flex !important;
-        width: 100%;
+        grid-column: 1 / span 3;
+        grid-row: 3;
         justify-content: center;
         margin-top: 10px;
-        order: 4;
+        width: 100%;
       }
       
       #searchResults {
-        top: calc(100% + 5px);
-        width: calc(100% - 20px);
-        left: 10px;
+        width: calc(100vw - 30px);
+        left: 50%;
+        transform: translateX(-50%);
       }
     }
 
@@ -211,7 +224,6 @@
       margin-top: 10px;
       color: #666;
     }
-
   </style>
 </head>
 <body>
@@ -284,8 +296,6 @@
       const query = this.value.trim();
       
       if (query.length > 0) {
-        // Here you would typically make an AJAX call to your backend
-        // For demo purposes, we'll just show some dummy results
         const dummyResults = [
           "Super Adventure Game",
           "Puzzle Challenge",
