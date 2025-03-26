@@ -23,13 +23,17 @@
       background-color: white;
       text-align: center;
       padding-top: 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
     }
 
     .toolbar {
       background-color: #f4f4f9;
       overflow: visible;
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
+      display: flex;
+      justify-content: space-between;
       align-items: center;
       padding: 10px 20px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -42,24 +46,24 @@
     }
 
     .toolbar-left {
+      flex: 1;
       display: flex;
       justify-content: flex-start;
-      align-items: center;
       min-width: 0;
     }
 
     .toolbar-center {
+      flex: 2;
       display: flex;
       justify-content: center;
-      align-items: center;
-      width: 100%;
       position: relative;
+      min-width: 0;
     }
 
     .toolbar-right {
+      flex: 1;
       display: flex;
       justify-content: flex-end;
-      align-items: center;
       min-width: 0;
     }
 
@@ -71,7 +75,6 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      margin-right: auto;
     }
 
     .toolbar .logo a {
@@ -85,7 +88,6 @@
       color: #333;
       white-space: nowrap;
       overflow: hidden;
-      margin-left: auto;
     }
 
     .toolbar .date-time div {
@@ -93,6 +95,11 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    /* Changed time color to gray */
+    .toolbar .date-time #time {
+      color: #666; /* Gray color */
     }
 
     .menu-toggle {
@@ -103,12 +110,12 @@
       margin-left: 15px;
     }
 
-    /* Search Bar Styles - 25% longer */
+    /* Search Bar Styles - Centered and 25% longer */
     .search-container {
       position: relative;
       width: 100%;
-      max-width: 500px; /* Increased from 400px (25% longer) */
-      min-width: 250px; /* Increased from 200px */
+      max-width: 500px;
+      min-width: 250px;
       margin: 0 auto;
     }
 
@@ -155,64 +162,21 @@
       background-color: #f5f5f5;
     }
 
-    @media (max-width: 900px) {
-      .search-container {
-        max-width: 400px; /* Slightly smaller on medium screens */
-      }
-    }
-
-    @media (max-width: 768px) {
-      .toolbar {
-        grid-template-columns: auto 1fr auto;
-        padding: 10px 15px;
-      }
-      
-      .toolbar-left {
-        grid-column: 1;
-      }
-      
-      .toolbar-center {
-        grid-column: 1 / span 3;
-        grid-row: 2;
-        margin-top: 10px;
-      }
-      
-      .toolbar-right {
-        grid-column: 3;
-      }
-      
-      .menu-toggle {
-        display: block;
-      }
-      
-      .date-time {
-        display: none !important;
-      }
-      
-      .toolbar.active .date-time {
-        display: flex !important;
-        grid-column: 1 / span 3;
-        grid-row: 3;
-        justify-content: center;
-        margin-top: 10px;
-        width: 100%;
-      }
-      
-      .search-container {
-        max-width: 100%; /* Full width on mobile */
-        min-width: 0;
-      }
-      
-      #searchResults {
-        width: calc(100vw - 30px);
-        left: 50%;
-        transform: translateX(-50%);
-      }
+    /* Centered Page Content */
+    .page-content {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .header-image-container {
       margin-top: 30px;
       text-align: center;
+      width: 100%;
     }
 
     .header-image {
@@ -227,6 +191,8 @@
       font-size: 80px;
       margin-top: 20px;
       color: #333;
+      text-align: center;
+      width: 100%;
     }
 
     .subtitle {
@@ -234,17 +200,96 @@
       font-size: 25px;
       margin-top: 10px;
       color: #666;
+      text-align: center;
+      width: 100%;
+    }
+
+    @media (max-width: 900px) {
+      .search-container {
+        max-width: 400px;
+      }
+      
+      .main-title {
+        font-size: 60px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .toolbar {
+        flex-wrap: wrap;
+        padding: 10px 15px;
+      }
+      
+      .toolbar-left {
+        order: 1;
+        flex: 1;
+      }
+      
+      .toolbar-center {
+        order: 3;
+        flex: 1 0 100%;
+        margin-top: 10px;
+      }
+      
+      .toolbar-right {
+        order: 2;
+        flex: 1;
+        justify-content: flex-end;
+      }
+      
+      .menu-toggle {
+        display: block;
+      }
+      
+      .date-time {
+        display: none !important;
+      }
+      
+      .toolbar.active .date-time {
+        display: flex !important;
+        order: 4;
+        flex: 1 0 100%;
+        justify-content: center;
+        margin-top: 10px;
+      }
+      
+      .search-container {
+        max-width: 100%;
+        min-width: 0;
+      }
+      
+      #searchResults {
+        width: calc(100vw - 30px);
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      
+      .main-title {
+        font-size: 48px;
+      }
+      
+      .subtitle {
+        font-size: 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .main-title {
+        font-size: 36px;
+      }
+      
+      .subtitle {
+        font-size: 18px;
+      }
+      
+      .header-image {
+        width: 180px;
+        height: 180px;
+      }
     }
   </style>
 </head>
 <body>
-  <!-- Header Image and Title -->
-  <div class="header-image-container">
-    <img src="Images/frankymilky.png" alt="Frankin' Games" class="header-image" />
-    <div class="main-title">Frankin' Games!</div>
-    <div class="subtitle">the website for premium games.</div>
-  </div>
-
   <div class="toolbar" id="toolbar">
     <div class="toolbar-left">
       <div class="logo">
@@ -271,6 +316,16 @@
         <i class="fas fa-bars"></i>
       </div>
     </div>
+  </div>
+
+  <div class="page-content">
+    <div class="header-image-container">
+      <img src="Images/frankymilky.png" alt="Frankin' Games" class="header-image" />
+      <div class="main-title">Frankin' Games!</div>
+      <div class="subtitle">the website for premium games.</div>
+    </div>
+    
+    <!-- Additional page content would go here -->
   </div>
 
   <script>
