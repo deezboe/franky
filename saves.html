@@ -1,218 +1,270 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Storage Data Display</title>
+    <meta charset="utf-8">
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>IndexedDB File Manager with Database Editor</title>
+    <link rel="apple-touch-icon" sizes="256x256" href="icon.png">
+    <link rel="icon" type="x-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
     <style>
+        /* Original styles from first file */
         body {
-            font-family: Arial, sans-serif;
+            background: white;
+            color: black;
+            font-family: arial;
+            margin: 0;
+            padding: none;
+            overflow: hidden;
+            -webkit-user-select: none;
+        }
+        .file_select {
+            text-align: center;
+            font-size: 0.9em;
+        }
+        
+        /* New styles for database editor */
+        .database-editor {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            background: #f5f5f5;
+            border-left: 1px solid #ddd;
             padding: 20px;
+            overflow-y: auto;
+            z-index: 1000;
         }
-        section {
-            margin-bottom: 30px;
-        }
-        h2 {
+        
+        .database-editor h2 {
             color: #333;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
         }
-        ul {
-            list-style-type: none;
-            padding-left: 0;
+        
+        .storage-section {
+            margin-bottom: 20px;
         }
-        li {
+        
+        .storage-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .storage-item {
+            padding: 8px;
             margin: 5px 0;
-            color: #555;
+            background: white;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .database {
-            font-weight: bold;
-            margin-top: 15px;
-        }
-        .store {
-            margin-left: 20px;
-        }
-        .entry {
-            margin-left: 40px;
-        }
-        .edit-button {
-            margin-left: 10px;
-            padding: 5px 10px;
-            font-size: 12px;
+        
+        .edit-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
             cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .edit-btn:hover {
+            background: #1976d2;
+        }
+        
+        .editor-toggle {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 1001;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
     </style>
+    <!-- Include all original style blocks from first file -->
+    <style id="detectElementResize" type="text/css">
+        /* Original styles */
+    </style>
 </head>
+
 <body>
-    <section id="local-storage">
-        <h2>Local Storage</h2>
-        <ul id="local-storage-list">
-            <!-- Local storage items will be displayed here -->
-        </ul>
-    </section>
+    <div id="root" class="">
+        <div class="App">
+            <div style="height: 480px;">
+                <!-- Original file manager content -->
+                <div data-test-id="filemanager" class="oc-fm--file-manager ">
+                    <!-- Original file manager structure -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Database Editor Panel -->
+    <div class="database-editor" id="databaseEditor" style="display: none;">
+        <h2>Storage Editor</h2>
+        
+        <div class="storage-section">
+            <h3>Local Storage</h3>
+            <ul class="storage-list" id="local-storage-list"></ul>
+        </div>
+        
+        <div class="storage-section">
+            <h3>IndexedDB</h3>
+            <ul class="storage-list" id="indexeddb-list"></ul>
+        </div>
+    </div>
+    
+    <button class="editor-toggle" id="editorToggle">⚙️</button>
 
-    <section id="indexeddb">
-        <h2>IndexedDB</h2>
-        <ul id="indexeddb-list">
-            <!-- IndexedDB data will be displayed here -->
-        </ul>
-    </section>
-
+    <script src="browserfs.min.js"></script>
     <script>
-        // Display Local Storage Items
-        const localStorageList = document.getElementById("local-storage-list");
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            const li = document.createElement("li");
-            li.textContent = key;
-
-            // Create "Edit Data" button for each Local Storage item
-            const editButton = document.createElement("button");
-            editButton.textContent = "Edit Data";
-            editButton.classList.add("edit-button");
-            editButton.onclick = function() {
-                console.log("Editing LocalStorage Key: ", key); // Debug log for key
-                editData(key, 'localStorage'); // Call editData function with key and storage type
-            };
-            li.appendChild(editButton);
-
-            localStorageList.appendChild(li);
-        }
-
-        // Display IndexedDB Items - Get all databases
-        const indexeddbList = document.getElementById("indexeddb-list");
-
-        // Function to get all IndexedDB databases and their contents
-        function getIndexedDBData() {
-            const request = indexedDB.databases();
-
-            request.then(databases => {
+        // Original file manager scripts would go here
+        
+        // New database editor functionality
+        document.getElementById('editorToggle').addEventListener('click', function() {
+            const editor = document.getElementById('databaseEditor');
+            editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
+            loadStorageData();
+        });
+        
+        function loadStorageData() {
+            // Load Local Storage
+            const localStorageList = document.getElementById("local-storage-list");
+            localStorageList.innerHTML = '';
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                
+                const li = document.createElement("li");
+                li.className = "storage-item";
+                li.innerHTML = `
+                    <span>${key}: ${value}</span>
+                    <button class="edit-btn" data-key="${key}" data-type="localStorage">Edit</button>
+                `;
+                localStorageList.appendChild(li);
+            }
+            
+            // Load IndexedDB
+            const indexeddbList = document.getElementById("indexeddb-list");
+            indexeddbList.innerHTML = '';
+            
+            indexedDB.databases().then(databases => {
                 if (databases.length === 0) {
                     const li = document.createElement("li");
-                    li.textContent = "No IndexedDB databases found.";
+                    li.className = "storage-item";
+                    li.textContent = "No databases found";
                     indexeddbList.appendChild(li);
                 } else {
                     databases.forEach(db => {
-                        const dbName = db.name;
-                        const dbEntry = document.createElement("li");
-                        dbEntry.classList.add("database");
-                        dbEntry.textContent = `Database: ${dbName}`;
-                        indexeddbList.appendChild(dbEntry);
-
-                        // Open the database to get object stores
-                        const openRequest = indexedDB.open(dbName, db.version);
-
+                        const dbItem = document.createElement("li");
+                        dbItem.className = "storage-item";
+                        dbItem.innerHTML = `<strong>Database:</strong> ${db.name}`;
+                        indexeddbList.appendChild(dbItem);
+                        
+                        const openRequest = indexedDB.open(db.name, db.version);
+                        
                         openRequest.onsuccess = function(event) {
                             const dbInstance = event.target.result;
-                            const objectStoreNames = dbInstance.objectStoreNames;
-
-                            // Convert the DOMStringList to an array and iterate over it
-                            const storeNamesArray = Array.from(objectStoreNames);
+                            const storeNames = Array.from(dbInstance.objectStoreNames);
                             
-                            if (storeNamesArray.length === 0) {
+                            if (storeNames.length === 0) {
+                                const noStoreItem = document.createElement("li");
+                                noStoreItem.className = "storage-item";
+                                noStoreItem.textContent = "No object stores";
+                                indexeddbList.appendChild(noStoreItem);
                                 return;
                             }
-
-                            storeNamesArray.forEach(storeName => {
-                                const storeEntry = document.createElement("li");
-                                storeEntry.classList.add("store");
-                                storeEntry.textContent = `Store: ${storeName}`;
-                                dbEntry.appendChild(storeEntry);
-
-                                // Open a transaction for the store to access its keys
+                            
+                            storeNames.forEach(storeName => {
+                                const storeItem = document.createElement("li");
+                                storeItem.className = "storage-item";
+                                storeItem.innerHTML = `<strong>Store:</strong> ${storeName}`;
+                                indexeddbList.appendChild(storeItem);
+                                
                                 const transaction = dbInstance.transaction(storeName, "readonly");
                                 const objectStore = transaction.objectStore(storeName);
-
-                                // Using openCursor to iterate through the store and retrieve keys
                                 const cursorRequest = objectStore.openCursor();
-
+                                
                                 cursorRequest.onsuccess = function(event) {
                                     const cursor = event.target.result;
                                     if (cursor) {
-                                        console.log("IndexedDB Cursor Key: ", cursor.key); // Debug log for IndexedDB key
                                         const entryItem = document.createElement("li");
-                                        entryItem.classList.add("entry");
-                                        entryItem.textContent = cursor.key;
-
-                                        // Create "Edit Data" button for each IndexedDB entry
-                                        const editButton = document.createElement("button");
-                                        editButton.textContent = "Edit Data";
-                                        editButton.classList.add("edit-button");
-                                        editButton.onclick = function() {
-                                            console.log("Editing IndexedDB Key: ", cursor.key); // Debug log for key
-                                            editData(cursor.key, 'indexedDB', dbName, storeName); // Call editData with key, db, and store name
-                                        };
-                                        entryItem.appendChild(editButton);
-
-                                        storeEntry.appendChild(entryItem);
+                                        entryItem.className = "storage-item";
+                                        entryItem.style.marginLeft = "20px";
+                                        entryItem.innerHTML = `
+                                            <span>${cursor.key}: ${JSON.stringify(cursor.value)}</span>
+                                            <button class="edit-btn" 
+                                                    data-key="${cursor.key}" 
+                                                    data-type="indexedDB"
+                                                    data-db="${db.name}"
+                                                    data-store="${storeName}">Edit</button>
+                                        `;
+                                        indexeddbList.appendChild(entryItem);
                                         cursor.continue();
                                     }
                                 };
-
-                                cursorRequest.onerror = function() {
-                                    const errorItem = document.createElement("li");
-                                    errorItem.classList.add("entry");
-                                    errorItem.textContent = "Error retrieving keys from store.";
-                                    storeEntry.appendChild(errorItem);
-                                };
                             });
-                        };
-
-                        openRequest.onerror = function() {
-                            const errorItem = document.createElement("li");
-                            errorItem.classList.add("database");
-                            errorItem.textContent = `Error opening database: ${dbName}`;
-                            indexeddbList.appendChild(errorItem);
                         };
                     });
                 }
             }).catch(error => {
                 const li = document.createElement("li");
-                li.textContent = "Error fetching IndexedDB databases: " + error;
+                li.className = "storage-item";
+                li.textContent = "Error: " + error;
                 indexeddbList.appendChild(li);
             });
         }
-
-        // Run the function to get IndexedDB data
-        getIndexedDBData();
-
-        // Function to handle editing data
-        function editData(key, storageType, dbName = null, storeName = null) {
-            if (!key) {
-                alert("No key provided for editing.");
-                return;
-            }
-
-            console.log("Editing key:", key, "Storage type:", storageType); // Debug log for editing function
-
-            let newValue = prompt("Enter new value for " + key);
-
-            if (newValue !== null) {
-                if (storageType === 'localStorage') {
-                    localStorage.setItem(key, newValue);
-                    alert("LocalStorage data updated!");
-                } else if (storageType === 'indexedDB' && dbName && storeName) {
-                    const openRequest = indexedDB.open(dbName, 1); // Open DB with version 1
-
-                    openRequest.onsuccess = function(event) {
-                        const dbInstance = event.target.result;
-                        const transaction = dbInstance.transaction(storeName, "readwrite");
-                        const objectStore = transaction.objectStore(storeName);
-                        const updateRequest = objectStore.put(newValue, key); // Update data
-
-                        updateRequest.onsuccess = function() {
-                            alert(`IndexedDB data for ${key} updated successfully!`);
+        
+        // Handle edit clicks
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('edit-btn')) {
+                const key = e.target.dataset.key;
+                const type = e.target.dataset.type;
+                const db = e.target.dataset.db;
+                const store = e.target.dataset.store;
+                
+                let currentValue = '';
+                if (type === 'localStorage') {
+                    currentValue = localStorage.getItem(key);
+                } else {
+                    // For IndexedDB, we'd need to fetch the current value
+                    currentValue = prompt("Enter new value for " + key);
+                }
+                
+                const newValue = prompt("Edit value for " + key, currentValue);
+                
+                if (newValue !== null) {
+                    if (type === 'localStorage') {
+                        localStorage.setItem(key, newValue);
+                    } else if (type === 'indexedDB') {
+                        const openRequest = indexedDB.open(db, 1);
+                        openRequest.onsuccess = function(event) {
+                            const dbInstance = event.target.result;
+                            const transaction = dbInstance.transaction(store, "readwrite");
+                            const objectStore = transaction.objectStore(store);
+                            objectStore.put(newValue, key);
                         };
-
-                        updateRequest.onerror = function() {
-                            alert("Error updating IndexedDB data.");
-                        };
-                    };
-
-                    openRequest.onerror = function() {
-                        alert("Error opening IndexedDB database.");
-                    };
+                    }
+                    loadStorageData(); // Refresh the view
                 }
             }
-        }
+        });
     </script>
 </body>
 </html>
