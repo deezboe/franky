@@ -1,1 +1,55 @@
-(this.webpackJsonpsavemanager=this.webpackJsonpsavemanager||[]).push([[0],{102:function(e,t,n){"use strict";Object.defineProperty(t,"__esModule",{value:!0}),t.getIcon=function(e){return"dir"===e.type?{svg:l,fill:"#424242"}:b(e.name,m)?{svg:o,fill:"#e53935"}:b(e.name,p)?{svg:u,fill:"#e53935"}:b(e.name,v)?{svg:d,fill:"#e53935"}:b(e.name,g)?{svg:s,fill:"#616161"}:b(e.name,h)?{svg:c,fill:"#e53935"}:{svg:f,fill:"#616161"}};var a,i=n(17),r=(a=i)&&a.__esModule?a:{default:a};var l=r.default.folder,o=r.default.volumeUp,u=r.default.image,d=r.default.ondemandVideo,s=r.default.archive,c=r.default.book,f=r.default.insertDriveFile,m=["aac","aiff","flac","m4a","ogg","mp3","wav","wma"],p=["gif","png","jpg","jpeg","bmp","svg"],v=["avi","flv","wmv","mov","mp4"],g=["tar","zip","gz","bz2","rar"],h=["pdf","epub","fb2"];function b(e,t){var n="("+t.join("|")+")";return t.some((function(t){return new RegExp("^.*."+n+"$").test(e.toLowerCase())})}},284:function(e,t,n){"use strict";n.r(t);var a=n(7),i=n(11),r=n.n(i),l=n(61),o=n.n(l),u=(n(112),n(63)),d=n(103),s=n(104),c=n(40),f=n(106),m=n(105),p=(n(113),n(62)),v=n(19),g=n.n(v),h=n(283),b=function(e){Object(f.a)(n,e);var t=Object(m.a)(n);function n(e){var i;return Object(d.a)(this,n),(i=t.call(this,e)).render=function(){var e=Object(u.a)(Object(u.a)({},g.a.apiOptions),{},{apiRoot:"/"}),t="Loading...";return i.state.isReady&&(t=Object(a.jsx)("div",{style:{height:"480px"},children:Object(a.jsx)(p.FileManager,{children:Object(a.jsx)(p.FileNavigator,{id:"filemanager-1",api:g.a.api,apiOptions:e,capabilities:g.a.capabilities,listViewLayout:g.a.listViewLayout,viewLayoutOptions:g.a.viewLayoutOptions})})})),Object(a.jsx)("div",{className:"App",children:t})},i.state={isReady:!1},h.install(window),i.componentDidMount=i.componentDidMount.bind(Object(c.a)(i)),i}return Object(s.a)(n,[{key:"componentDidMount",value:function(){var e=this;h.configure({fs:"AsyncMirror",options:{sync:{fs:"InMemory"},async:{fs:"IndexedDB",options:{storeName:"file_sandbox"}}}},(function(t){if(t)throw t;e.setState({isReady:!0}),window.fs=window.require("fs")}))}}]),n}(i.Component);o.a.render(Object(a.jsx)(r.a.StrictMode,{children:Object(a.jsx)(b,{})}),document.getElementById("root"))}],[[284,1,2]]]);
+(this.webpackJsonpsavemanager = this.webpackJsonpsavemanager || []).push([[0], {
+  102: function(e, t, n) {
+    "use strict";
+    Object.defineProperty(t, "__esModule", { value: !0 }), t.getIcon = function(e) {
+      return "dir" === e.type ? { svg: l, fill: "#424242" } : b(e.name, m) ? { svg: o, fill: "#e53935" } : b(e.name, p) ? { svg: u, fill: "#e53935" } : b(e.name, v) ? { svg: d, fill: "#e53935" } : b(e.name, g) ? { svg: s, fill: "#616161" } : b(e.name, h) ? { svg: c, fill: "#e53935" } : { svg: f, fill: "#616161" };
+    };
+    var a, i = n(17), r = (a = i) && a.__esModule ? a : { default: a };
+    var l = r.default.folder, o = r.default.volumeUp, u = r.default.image, d = r.default.ondemandVideo, s = r.default.archive, c = r.default.book, f = r.default.insertDriveFile, m = ["aac", "aiff", "flac", "m4a", "ogg", "mp3", "wav", "wma"], p = ["gif", "png", "jpg", "jpeg", "bmp", "svg"], v = ["avi", "flv", "wmv", "mov", "mp4"], g = ["tar", "zip", "gz", "bz2", "rar"], h = ["pdf", "epub", "fb2"];
+    function b(e, t) {
+      var n = "(" + t.join("|") + ")";
+      return t.some((function(t) { return new RegExp("^.*." + n + "$").test(e.toLowerCase()) }));
+    }
+  },
+  284: function(e, t, n) {
+    "use strict";
+    n.r(t);
+    var a = n(7), i = n(11), r = n.n(i), l = n(61), o = n.n(l), u = (n(112), n(63)), d = n(103), s = n(104), c = n(40), f = n(106), m = n(105), p = (n(113), n(62)), v = n(19), g = n.n(v), h = n(283), b = function(e) {
+      Object(f.a)(n, e);
+      var t = Object(m.a)(n);
+      function n(e) {
+        var i;
+        return Object(d.a)(this, n), (i = t.call(this, e)).render = function() {
+          var e = Object(u.a)(Object(u.a)({}, g.a.apiOptions), {}, { apiRoot: "/" }), t = "Loading...";
+          return i.state.isReady && (t = Object(a.jsx)("div", { style: { height: "480px" }, children: Object(a.jsx)(p.FileManager, { children: Object(a.jsx)(p.FileNavigator, { id: "filemanager-1", api: g.a.api, apiOptions: e, capabilities: g.a.capabilities, listViewLayout: g.a.listViewLayout, viewLayoutOptions: g.a.viewLayoutOptions }) }) })), Object(a.jsx)("div", { className: "App", children: t });
+        }, i.state = { isReady: !1 }, h.install(window), i.componentDidMount = i.componentDidMount.bind(Object(c.a)(i)), i;
+      }
+      return Object(s.a)(n, [{
+        key: "componentDidMount",
+        value: function() {
+          var e = this;
+          // Configurable filesystem setup
+          var fsConfig = {
+            fs: "AsyncMirror",
+            options: {
+              sync: { fs: "InMemory" }, // Fast in-memory storage
+              async: { 
+                fs: "IndexedDB",       // Persistent storage
+                options: { 
+                  storeName: "file_sandbox" // Change this to your preferred DB name
+                }
+              }
+            }
+          };
+          
+          h.configure(fsConfig, function(t) {
+            if (t) throw t;
+            e.setState({ isReady: !0 });
+            window.fs = window.require("fs");
+          });
+        }
+      }]), n;
+    }(i.Component);
+    o.a.render(Object(a.jsx)(r.a.StrictMode, { children: Object(a.jsx)(b, {}) }), document.getElementById("root"));
+  }
+}], [[284, 1, 2]]);
