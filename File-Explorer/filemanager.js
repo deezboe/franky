@@ -1,1 +1,0 @@
-BrowserFS.configure({fs:"IndexedDB",options:{storeName:"website_files"}},(function(e){e?console.error("Error initializing filesystem:",e):i.setState({isReady:!0}),window.fs=BrowserFS.BFSRequire("fs")})
