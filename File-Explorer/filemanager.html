@@ -1,99 +1,126 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- [Keep all your existing CSS and meta tags] -->
+    <meta charset="utf-8">
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>IndexedDB File Manager</title>
+    <link rel="apple-touch-icon" sizes="256x256" href="icon.png">
+    <link rel="icon" type="x-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
     <style>
-        /* Add this new style for the store selector */
-        .store-selector {
+        body {
+            background: white;
+            color: black;
+            font-family: arial;
+            margin: 0;
+            padding: none;
+            overflow: hidden;
+            -webkit-user-select: none;
+        }
+        .file_select {
+            text-align: center;
+            font-size: 0.9em;
+        }
+        /* New store selector styles */
+        .store-selector-container {
             margin-right: 15px;
-            padding: 6px 12px;
+            position: relative;
+        }
+        .store-selector {
+            padding: 6px 24px 6px 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
             background: white;
             font-size: 14px;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23424242'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 12px;
         }
     </style>
+    <!-- [Keep all your existing CSS styles] -->
+    <script src="browserfs.min.js"></script>
+    <script src="storeManager.js"></script> <!-- New store manager -->
 </head>
 <body>
     <div id="root">
-        <!-- [Keep your existing app structure] -->
+        <div class="App">
+            <div style="height: 480px;">
+                <div data-test-id="filemanager" class="oc-fm--file-manager">
+                    <div class="oc-fm--file-manager__navigators">
+                        <div class="oc-fm--file-manager__navigator">
+                            <div id="filemanager-1" data-test-id="filenavigator" class="oc-fm--file-navigator">
+                                <div class="oc-fm--file-navigator__toolbar">
+                                    <div class="oc-fm--toolbar">
+                                        <!-- Added store selector -->
+                                        <div class="store-selector-container">
+                                            <select id="storeSelector" class="store-selector" title="Select IndexedDB Store">
+                                                <option value="file_sandbox">Default Store</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="oc-fm--toolbar__nav-buttons">
+                                            <button type="button" disabled="" class="oc-fm--toolbar__item" title="Move back">
+                                                <div class="oc-svg oc-fm--toolbar__item-icon" style="fill: rgb(66, 66, 66);">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><path d="M30.83 32.67l-9.17-9.17 9.17-9.17L28 11.5l-12 12 12 12z"></path></svg>
+                                                </div>
+                                            </button>
+                                            <button type="button" disabled="" class="oc-fm--toolbar__item" title="Move forward">
+                                                <div class="oc-svg oc-fm--toolbar__item-icon" style="fill: rgb(66, 66, 66);">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><path d="M17.17 32.92l9.17-9.17-9.17-9.17L20 11.75l12 12-12 12z"></path></svg>
+                                                </div>
+                                            </button>
+                                        </div>
+                                        <!-- [Rest of your existing toolbar code] -->
+                                    </div>
+                                </div>
+                                <!-- [Rest of your existing file manager UI] -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Updated scripts section -->
     <script src="fileManagerRuntime.js"></script>
     <script src="react.js"></script>
-    <script>
-        // ========== NEW INDEXEDDB ROOT ACCESS CODE ==========
-        class IndexedDBRootManager {
-            constructor() {
-                this.knownStores = ['file_sandbox'];
-                this.currentStore = 'file_sandbox';
-            }
-
-            async init() {
-                await this.detectStores();
-                await this.initBrowserFS();
-                this.setupUI();
-            }
-
-            async detectStores() {
-                if ('databases' in indexedDB) {
-                    try {
-                        const databases = await indexedDB.databases();
-                        this.knownStores = databases.map(db => db.name);
-                        localStorage.setItem('knownStores', JSON.stringify(this.knownStores));
-                    } catch (e) {
-                        console.warn("Couldn't list databases, using fallback");
-                        this.knownStores = JSON.parse(localStorage.getItem('knownStores')) || ['file_sandbox'];
-                    }
-                }
-                return this.knownStores;
-            }
-
-            async initBrowserFS(storeName = this.currentStore) {
-                return new Promise((resolve) => {
-                    BrowserFS.configure({
-                        fs: "IndexedDB",
-                        options: { storeName }
-                    }, (err) => {
-                        if (err) throw err;
-                        window.fs = BrowserFS.BFSRequire('fs');
-                        this.currentStore = storeName;
-                        resolve();
-                    });
-                });
-            }
-
-            setupUI() {
-                // Create store selector dropdown
-                const toolbar = document.querySelector('.oc-fm--toolbar');
-                const selector = document.createElement('select');
-                selector.className = 'store-selector';
-                
-                this.knownStores.forEach(store => {
-                    const option = document.createElement('option');
-                    option.value = store;
-                    option.textContent = store;
-                    selector.appendChild(option);
-                });
-
-                selector.addEventListener('change', async (e) => {
-                    await this.initBrowserFS(e.target.value);
-                    // Add logic to refresh your file view here
-                    console.log(`Switched to store: ${e.target.value}`);
-                });
-
-                toolbar.insertBefore(selector, toolbar.firstChild);
-            }
-        }
-
-        // Initialize everything when DOM is ready
-        document.addEventListener('DOMContentLoaded', async () => {
-            const rootManager = new IndexedDBRootManager();
-            await rootManager.init();
-        });
-        // ========== END OF NEW CODE ==========
-    </script>
     <script src="filemanager.js"></script>
+    
+    <script>
+    // Enhanced initialization with store management
+    document.addEventListener('DOMContentLoaded', async function() {
+        // Initialize store manager
+        await storeManager.detectStores();
+        
+        // Populate store selector
+        const selector = document.getElementById('storeSelector');
+        storeManager.stores.forEach(store => {
+            const option = document.createElement('option');
+            option.value = store;
+            option.textContent = store;
+            selector.appendChild(option);
+        });
+        
+        // Set current store
+        selector.value = storeManager.currentStore;
+        
+        // Handle store switching
+        selector.addEventListener('change', async function() {
+            try {
+                await storeManager.switchStore(this.value);
+                // Refresh UI - modify this based on your framework
+                window.location.reload(); 
+            } catch (error) {
+                console.error('Store switch failed:', error);
+            }
+        });
+        
+        // Initialize BrowserFS with current store
+        await storeManager.switchStore(storeManager.currentStore);
+    });
+    </script>
 </body>
 </html>
