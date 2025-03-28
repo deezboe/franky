@@ -1,77 +1,116 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Frankin' Games</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <style>
-    /* Your existing body and page content styles */
-    body {
-      font-family: 'ComicSans', sans-serif;
-      margin: 0;
-      padding: 0;
-      padding-top: 80px; /* Adjusted for navbar height */
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
-    
-    /* Rest of your main page styles... */
-  </style>
-</head>
-<body>
-  <!-- Navbar will be inserted here -->
-  <div id="navbar-container"></div>
-
-  <div class="page-content">
-    <!-- Your page content -->
+<!-- navbar.html -->
+<div class="toolbar" id="toolbar">
+  <div class="toolbar-left">
+    <div class="logo">
+      <a href="/">Frankin' Games</a>
+    </div>
   </div>
+  
+  <div class="toolbar-center">
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="Search games..." autocomplete="off">
+      <div id="searchResults"></div>
+    </div>
+  </div>
+  
+  <div class="toolbar-right">
+    <div class="date-time" id="date-time">
+      <div id="day-of-week"></div>
+      <div id="month-day-year"></div>
+      <div id="time"></div>
+    </div>
+    <div class="menu-toggle" id="menu-toggle">
+      <i class="fas fa-bars"></i>
+    </div>
+  </div>
+</div>
 
-  <script>
-    // Load navbar
-    fetch('navbar.html')
-      .then(response => response.text())
-      .then(html => {
-        document.getElementById('navbar-container').innerHTML = html;
-        initializeNavbar();
-      })
-      .catch(err => console.error('Error loading navbar:', err));
+<style>
+  .toolbar {
+    background-color: #f4f4f9;
+    overflow: visible;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    box-sizing: border-box;
+    gap: 20px;
+  }
 
-    function initializeNavbar() {
-      // Mobile menu toggle
-      const menuToggle = document.getElementById('menu-toggle');
-      const toolbar = document.getElementById('toolbar');
-      
-      if (menuToggle && toolbar) {
-        menuToggle.addEventListener('click', () => {
-          toolbar.classList.toggle('active');
-        });
-      }
+  .toolbar-left {
+    flex: 1;
+    display: flex;
+    min-width: 100px;
+    overflow: hidden;
+  }
 
-      // Search functionality
-      const searchInput = document.getElementById('searchInput');
-      const searchResults = document.getElementById('searchResults');
-      
-      if (searchInput && searchResults) {
-        searchInput.addEventListener('input', function() {
-          const query = this.value.trim();
-          if (query.length > 0) {
-            // Your search logic here
-            searchResults.style.display = 'block';
-          } else {
-            searchResults.style.display = 'none';
-          }
-        });
-        
-        document.addEventListener('click', (e) => {
-          if (!e.target.closest('.search-container')) {
-            searchResults.style.display = 'none';
-          }
-        });
-      }
-    }
-  </script>
-</body>
-</html>
+  .toolbar-center {
+    flex: 2;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .toolbar-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .toolbar .logo {
+    font-family: 'ComicSansBold', sans-serif;
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .date-time {
+    display: flex;
+    align-items: center;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .date-time div {
+    margin-right: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .date-time #time {
+    color: #666;
+    margin-right: 0;
+  }
+
+  /* Rest of your navbar styles... */
+</style>
+
+<script>
+  function updateDateTime() {
+    const now = new Date();
+    const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    
+    document.getElementById('day-of-week').textContent = days[now.getDay()];
+    document.getElementById('month-day-year').textContent = 
+      `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+    document.getElementById('time').textContent = now.toLocaleTimeString();
+  }
+  
+  // Update time immediately and every second
+  updateDateTime();
+  setInterval(updateDateTime, 1000);
+</script>
