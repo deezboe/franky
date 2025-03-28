@@ -29,139 +29,6 @@
       min-height: 100vh;
     }
 
-    .toolbar {
-      background-color: #f4f4f9;
-      overflow: visible;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 20px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      z-index: 1000;
-      box-sizing: border-box;
-    }
-
-    .toolbar-left {
-      flex: 1;
-      display: flex;
-      justify-content: flex-start;
-      min-width: 0;
-    }
-
-    .toolbar-center {
-      flex: 2;
-      display: flex;
-      justify-content: center;
-      position: relative;
-      min-width: 0;
-    }
-
-    .toolbar-right {
-      flex: 1;
-      display: flex;
-      justify-content: flex-end;
-      min-width: 0;
-    }
-
-    .toolbar .logo {
-      font-family: 'ComicSansBold', sans-serif;
-      font-size: 24px;
-      font-weight: bold;
-      color: #333;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .toolbar .logo a {
-      text-decoration: none;
-      color: #333;
-    }
-
-    .toolbar .date-time {
-      display: flex;
-      align-items: center;
-      color: #333;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-
-    .toolbar .date-time div {
-      margin-right: 15px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Changed time color to gray */
-    .toolbar .date-time #time {
-      color: #666; /* Gray color */
-    }
-
-    .menu-toggle {
-      display: none;
-      font-size: 24px;
-      color: #333;
-      cursor: pointer;
-      margin-left: 15px;
-    }
-
-    /* Search Bar Styles - Centered and 25% longer */
-    .search-container {
-      position: relative;
-      width: 100%;
-      max-width: 500px;
-      min-width: 250px;
-      margin: 0 auto;
-    }
-
-    #searchInput {
-      width: 100%;
-      padding: 8px 15px;
-      font-family: "ComicSans", sans-serif;
-      font-size: 16px;
-      border: 2px solid #ccc;
-      border-radius: 20px;
-      outline: none;
-      transition: all 0.3s;
-      box-sizing: border-box;
-    }
-
-    #searchInput:focus {
-      border-color: #666;
-      box-shadow: 0 0 5px rgba(0,0,0,0.2);
-    }
-
-    #searchResults {
-      position: absolute;
-      top: calc(100% + 10px);
-      left: 0;
-      width: 100%;
-      background-color: white;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      max-height: 300px;
-      overflow-y: auto;
-      display: none;
-      z-index: 1100;
-    }
-
-    .search-result-item {
-      padding: 10px;
-      text-align: left;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-    }
-
-    .search-result-item:hover {
-      background-color: #f5f5f5;
-    }
-
     /* Centered Page Content */
     .page-content {
       width: 100%;
@@ -205,65 +72,12 @@
     }
 
     @media (max-width: 900px) {
-      .search-container {
-        max-width: 400px;
-      }
-      
       .main-title {
         font-size: 60px;
       }
     }
 
     @media (max-width: 768px) {
-      .toolbar {
-        flex-wrap: wrap;
-        padding: 10px 15px;
-      }
-      
-      .toolbar-left {
-        order: 1;
-        flex: 1;
-      }
-      
-      .toolbar-center {
-        order: 3;
-        flex: 1 0 100%;
-        margin-top: 10px;
-      }
-      
-      .toolbar-right {
-        order: 2;
-        flex: 1;
-        justify-content: flex-end;
-      }
-      
-      .menu-toggle {
-        display: block;
-      }
-      
-      .date-time {
-        display: none !important;
-      }
-      
-      .toolbar.active .date-time {
-        display: flex !important;
-        order: 4;
-        flex: 1 0 100%;
-        justify-content: center;
-        margin-top: 10px;
-      }
-      
-      .search-container {
-        max-width: 100%;
-        min-width: 0;
-      }
-      
-      #searchResults {
-        width: calc(100vw - 30px);
-        left: 50%;
-        transform: translateX(-50%);
-      }
-      
       .main-title {
         font-size: 48px;
       }
@@ -290,33 +104,8 @@
   </style>
 </head>
 <body>
-  <div class="toolbar" id="toolbar">
-    <div class="toolbar-left">
-      <div class="logo">
-        <a href="/">Frankin' Games</a>
-      </div>
-    </div>
-    
-    <div class="toolbar-center">
-      <div class="search-container">
-        <input type="text" id="searchInput" placeholder="Search games..." autocomplete="off">
-        <div id="searchResults">
-          <!-- Search results will be inserted here -->
-        </div>
-      </div>
-    </div>
-    
-    <div class="toolbar-right">
-      <div class="date-time" id="date-time">
-        <div id="day-of-week"></div>
-        <div id="month-day-year"></div>
-        <div id="time"></div>
-      </div>
-      <div class="menu-toggle" id="menu-toggle">
-        <i class="fas fa-bars"></i>
-      </div>
-    </div>
-  </div>
+  <!-- Navbar will be inserted here by JavaScript -->
+  <div id="navbar-container"></div>
 
   <div class="page-content">
     <div class="header-image-container">
@@ -329,69 +118,61 @@
   </div>
 
   <script>
-    const menuToggle = document.getElementById('menu-toggle');
-    const dateTimeElement = document.getElementById('date-time');
-    const toolbar = document.getElementById('toolbar');
-    const searchContainer = document.querySelector('.search-container');
-    
-    function updateDateTime() {
-      const now = new Date();
-      
-      const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-      
-      const dayOfWeek = daysOfWeek[now.getDay()];
-      const monthDayYear = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
-      const time = now.toLocaleTimeString();
-
-      document.getElementById('day-of-week').textContent = dayOfWeek;
-      document.getElementById('month-day-year').textContent = monthDayYear;
-      document.getElementById('time').textContent = time;
-    }
-    
-    // Toggle mobile menu
-    menuToggle.addEventListener('click', () => {
-      toolbar.classList.toggle('active');
-    });
-    
-    // Search functionality
-    const searchInput = document.getElementById('searchInput');
-    const searchResults = document.getElementById('searchResults');
-    
-    searchInput.addEventListener('input', function() {
-      const query = this.value.trim();
-      
-      if (query.length > 0) {
-        const dummyResults = [
-          "Super Adventure Game",
-          "Puzzle Challenge",
-          "Racing Extreme",
-          "Space Explorer"
-        ].filter(item => item.toLowerCase().includes(query.toLowerCase()));
+    // Fetch and insert navbar
+    fetch('navbar.html')
+      .then(response => response.text())
+      .then(html => {
+        document.getElementById('navbar-container').innerHTML = html;
         
-        if (dummyResults.length > 0) {
-          searchResults.innerHTML = dummyResults.map(result => 
-            `<div class="search-result-item">${result}</div>`
-          ).join('');
-          searchResults.style.display = 'block';
-        } else {
-          searchResults.innerHTML = '<div class="search-result-item">No results found</div>';
-          searchResults.style.display = 'block';
+        // Initialize navbar functionality after it's loaded
+        const menuToggle = document.getElementById('menu-toggle');
+        const toolbar = document.getElementById('toolbar');
+        const searchContainer = document.querySelector('.search-container');
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        
+        if (menuToggle && toolbar) {
+          menuToggle.addEventListener('click', () => {
+            toolbar.classList.toggle('active');
+          });
         }
-      } else {
-        searchResults.style.display = 'none';
-      }
-    });
-    
-    // Hide search results when clicking outside
-    document.addEventListener('click', function(e) {
-      if (!searchContainer.contains(e.target) && e.target !== searchInput) {
-        searchResults.style.display = 'none';
-      }
-    });
-    
-    setInterval(updateDateTime, 1000);
-    updateDateTime();
+        
+        if (searchInput && searchResults) {
+          searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            if (query.length > 0) {
+              const dummyResults = [
+                "Super Adventure Game",
+                "Puzzle Challenge",
+                "Racing Extreme",
+                "Space Explorer"
+              ].filter(item => item.toLowerCase().includes(query.toLowerCase()));
+              
+              if (dummyResults.length > 0) {
+                searchResults.innerHTML = dummyResults.map(result => 
+                  `<div class="search-result-item">${result}</div>`
+                ).join('');
+                searchResults.style.display = 'block';
+              } else {
+                searchResults.innerHTML = '<div class="search-result-item">No results found</div>';
+                searchResults.style.display = 'block';
+              }
+            } else {
+              searchResults.style.display = 'none';
+            }
+          });
+          
+          document.addEventListener('click', function(e) {
+            if (searchContainer && !searchContainer.contains(e.target) && e.target !== searchInput) {
+              searchResults.style.display = 'none';
+            }
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error loading navbar:', error);
+      });
   </script>
 </body>
 </html>
