@@ -1,119 +1,154 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Frankin' Games</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: white;
-      text-align: center;
-      padding-top: 90px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    /* Page content styles */
-    .page-content {
-      width: 100%;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .header-image-container {
-      margin-top: 30px;
-      text-align: center;
-      width: 100%;
-    }
-
-    .header-image {
-      width: 235px;
-      height: 235px;
-      display: block;
-      margin: 0 auto;
-    }
-
-    .main-title {
-      font-size: 80px;
-      margin-top: 20px;
-      color: #333;
-      text-align: center;
-      width: 100%;
-    }
-
-    .subtitle {
-      font-size: 25px;
-      margin-top: 10px;
-      color: #666;
-      text-align: center;
-      width: 100%;
-    }
-
-    @media (max-width: 900px) {
-      .main-title {
-        font-size: 60px;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .main-title {
-        font-size: 48px;
-      }
-      .subtitle {
-        font-size: 20px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .main-title {
-        font-size: 36px;
-      }
-      .subtitle {
-        font-size: 18px;
-      }
-      .header-image {
-        width: 180px;
-        height: 180px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <!-- Navbar will be inserted here -->
-  <div id="navbar-container"></div>
-
-  <div class="page-content">
-    <div class="header-image-container">
-      <img src="Images/frankymilky.png" alt="Frankin' Games" class="header-image" />
-      <div class="main-title">Frankin' Games!</div>
-      <div class="subtitle">the website for premium games.</div>
+<!-- navbar.html -->
+<div class="toolbar" id="toolbar">
+  <!-- Navbar content remains the same -->
+  <div class="toolbar-left">
+    <div class="logo">
+      <a href="/">Frankin' Games</a>
     </div>
   </div>
+  
+  <div class="toolbar-center">
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="Search games..." autocomplete="off">
+      <div id="searchResults">
+        <!-- Search results will be inserted here -->
+      </div>
+    </div>
+  </div>
+  
+  <div class="toolbar-right">
+    <div class="date-time" id="date-time">
+      <div id="day-of-week"></div>
+      <div id="month-day-year"></div>
+      <div id="time"></div>
+    </div>
+    <div class="menu-toggle" id="menu-toggle">
+      <i class="fas fa-bars"></i>
+    </div>
+  </div>
+</div>
 
-  <script>
-    // Fetch and insert navbar
-    fetch('navbar.html')
-      .then(response => response.text())
-      .then(html => {
-        document.getElementById('navbar-container').innerHTML = html;
-      })
-      .catch(error => {
-        console.error('Error loading navbar:', error);
-        // Fallback basic navbar if needed
-        document.getElementById('navbar-container').innerHTML = `
-          <div style="position:fixed;top:0;width:100%;background:#f4f4f9;padding:10px;text-align:center;">
-            <a href="/">Frankin' Games</a>
-          </div>`;
+<style>
+  /* Font face definitions in navbar */
+  @font-face {
+    font-family: 'ComicSansBold';
+    src: url('Fonts/comicsans-bold.ttf') format('truetype');
+  }
+
+  @font-face {
+    font-family: 'ComicSans';
+    src: url('Fonts/comicsans.ttf') format('truetype');
+  }
+
+  /* Rest of the navbar styles remain the same */
+  .toolbar {
+    background-color: #f4f4f9;
+    overflow: visible;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    box-sizing: border-box;
+  }
+  
+  /* ... (rest of your existing navbar styles) ... */
+</style>
+
+<script>
+  // Font loader to ensure fonts are available
+  function loadFonts() {
+    const fontBold = new FontFace('ComicSansBold', 'url(Fonts/comicsans-bold.ttf)');
+    const fontRegular = new FontFace('ComicSans', 'url(Fonts/comicsans.ttf)');
+    
+    Promise.all([
+      fontBold.load(),
+      fontRegular.load()
+    ]).then((loadedFonts) => {
+      loadedFonts.forEach(font => document.fonts.add(font));
+      initNavbar();
+    }).catch(err => {
+      console.error('Font loading failed:', err);
+      initNavbar(); // Still initialize navbar even if fonts fail
+    });
+  }
+
+  function initNavbar() {
+    // Initialize date/time
+    function updateDateTime() {
+      const now = new Date();
+      const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      
+      const dayOfWeek = daysOfWeek[now.getDay()];
+      const monthDayYear = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+      const time = now.toLocaleTimeString();
+
+      const dayElement = document.getElementById('day-of-week');
+      const dateElement = document.getElementById('month-day-year');
+      const timeElement = document.getElementById('time');
+      
+      if (dayElement) dayElement.textContent = dayOfWeek;
+      if (dateElement) dateElement.textContent = monthDayYear;
+      if (timeElement) timeElement.textContent = time;
+    }
+    
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+
+    // Initialize menu toggle
+    const menuToggle = document.getElementById('menu-toggle');
+    const toolbar = document.getElementById('toolbar');
+    if (menuToggle && toolbar) {
+      menuToggle.addEventListener('click', () => {
+        toolbar.classList.toggle('active');
       });
-  </script>
-</body>
-</html>
+    }
+
+    // Initialize search functionality
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+    const searchContainer = document.querySelector('.search-container');
+    
+    if (searchInput && searchResults) {
+      searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        if (query.length > 0) {
+          const dummyResults = [
+            "Super Adventure Game",
+            "Puzzle Challenge",
+            "Racing Extreme",
+            "Space Explorer"
+          ].filter(item => item.toLowerCase().includes(query.toLowerCase()));
+          
+          if (dummyResults.length > 0) {
+            searchResults.innerHTML = dummyResults.map(result => 
+              `<div class="search-result-item">${result}</div>`
+            ).join('');
+            searchResults.style.display = 'block';
+          } else {
+            searchResults.innerHTML = '<div class="search-result-item">No results found</div>';
+            searchResults.style.display = 'block';
+          }
+        } else {
+          searchResults.style.display = 'none';
+        }
+      });
+      
+      document.addEventListener('click', function(e) {
+        if (searchContainer && !searchContainer.contains(e.target) && e.target !== searchInput) {
+          searchResults.style.display = 'none';
+        }
+      });
+    }
+  }
+
+  // Start loading fonts when navbar is loaded
+  loadFonts();
+</script>
