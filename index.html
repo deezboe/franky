@@ -6,18 +6,7 @@
   <title>Frankin' Games</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <style>
-    @font-face {
-      font-family: 'ComicSansBold';
-      src: url('Fonts/comicsans-bold.ttf') format('truetype');
-    }
-
-    @font-face {
-      font-family: 'ComicSans';
-      src: url('Fonts/comicsans.ttf') format('truetype');
-    }
-
     body {
-      font-family: 'ComicSans', sans-serif;
       margin: 0;
       padding: 0;
       background-color: white;
@@ -29,7 +18,7 @@
       min-height: 100vh;
     }
 
-    /* Centered Page Content */
+    /* Page content styles */
     .page-content {
       width: 100%;
       max-width: 1200px;
@@ -54,7 +43,6 @@
     }
 
     .main-title {
-      font-family: 'ComicSansBold', sans-serif;
       font-size: 80px;
       margin-top: 20px;
       color: #333;
@@ -63,7 +51,6 @@
     }
 
     .subtitle {
-      font-family: 'ComicSans', sans-serif;
       font-size: 25px;
       margin-top: 10px;
       color: #666;
@@ -81,7 +68,6 @@
       .main-title {
         font-size: 48px;
       }
-      
       .subtitle {
         font-size: 20px;
       }
@@ -91,11 +77,9 @@
       .main-title {
         font-size: 36px;
       }
-      
       .subtitle {
         font-size: 18px;
       }
-      
       .header-image {
         width: 180px;
         height: 180px;
@@ -104,7 +88,7 @@
   </style>
 </head>
 <body>
-  <!-- Navbar will be inserted here by JavaScript -->
+  <!-- Navbar will be inserted here -->
   <div id="navbar-container"></div>
 
   <div class="page-content">
@@ -113,8 +97,6 @@
       <div class="main-title">Frankin' Games!</div>
       <div class="subtitle">the website for premium games.</div>
     </div>
-    
-    <!-- Additional page content would go here -->
   </div>
 
   <script>
@@ -123,55 +105,14 @@
       .then(response => response.text())
       .then(html => {
         document.getElementById('navbar-container').innerHTML = html;
-        
-        // Initialize navbar functionality after it's loaded
-        const menuToggle = document.getElementById('menu-toggle');
-        const toolbar = document.getElementById('toolbar');
-        const searchContainer = document.querySelector('.search-container');
-        const searchInput = document.getElementById('searchInput');
-        const searchResults = document.getElementById('searchResults');
-        
-        if (menuToggle && toolbar) {
-          menuToggle.addEventListener('click', () => {
-            toolbar.classList.toggle('active');
-          });
-        }
-        
-        if (searchInput && searchResults) {
-          searchInput.addEventListener('input', function() {
-            const query = this.value.trim();
-            
-            if (query.length > 0) {
-              const dummyResults = [
-                "Super Adventure Game",
-                "Puzzle Challenge",
-                "Racing Extreme",
-                "Space Explorer"
-              ].filter(item => item.toLowerCase().includes(query.toLowerCase()));
-              
-              if (dummyResults.length > 0) {
-                searchResults.innerHTML = dummyResults.map(result => 
-                  `<div class="search-result-item">${result}</div>`
-                ).join('');
-                searchResults.style.display = 'block';
-              } else {
-                searchResults.innerHTML = '<div class="search-result-item">No results found</div>';
-                searchResults.style.display = 'block';
-              }
-            } else {
-              searchResults.style.display = 'none';
-            }
-          });
-          
-          document.addEventListener('click', function(e) {
-            if (searchContainer && !searchContainer.contains(e.target) && e.target !== searchInput) {
-              searchResults.style.display = 'none';
-            }
-          });
-        }
       })
       .catch(error => {
         console.error('Error loading navbar:', error);
+        // Fallback basic navbar if needed
+        document.getElementById('navbar-container').innerHTML = `
+          <div style="position:fixed;top:0;width:100%;background:#f4f4f9;padding:10px;text-align:center;">
+            <a href="/">Frankin' Games</a>
+          </div>`;
       });
   </script>
 </body>
