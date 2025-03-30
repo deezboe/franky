@@ -5,4 +5,3 @@
 - Finish Homepage
 - Working Searchbar
 - File Explorer (Maybe)
-- Proxy Mario-VS-Luigi Servers
