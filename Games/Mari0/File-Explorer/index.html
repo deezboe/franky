@@ -1,562 +1,326 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>IndexedDB File Explorer</title>
+    <title>IndexedDB Inspector</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        #controls { margin-bottom: 20px; padding: 10px; background: #f5f5f5; border-radius: 5px; }
-        #file-explorer { border: 1px solid #ddd; padding: 10px; margin-top: 10px; min-height: 300px; }
-        .file-item { padding: 5px; cursor: pointer; display: flex; align-items: center; }
-        .file-item:hover { background-color: #f0f0f0; }
-        .directory { font-weight: bold; }
-        .file-icon { margin-right: 8px; color: #666; }
-        .breadcrumb { display: flex; margin-bottom: 10px; flex-wrap: wrap; }
-        .breadcrumb-item { cursor: pointer; color: #0066cc; margin-right: 5px; }
-        .breadcrumb-item:hover { text-decoration: underline; }
-        .breadcrumb-separator { margin: 0 5px; color: #999; }
-        #file-content { margin-top: 20px; border: 1px solid #ddd; padding: 15px; background: #f9f9f9; }
-        #upload-area { border: 2px dashed #ccc; padding: 20px; text-align: center; margin-top: 10px; }
-        #upload-area.highlight { border-color: #0066cc; background: #e6f0ff; }
-        button { padding: 8px 15px; margin-right: 5px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0052a3; }
-        button:disabled { background: #cccccc; cursor: not-allowed; }
-        input[type="text"] { padding: 8px; width: 300px; margin-right: 10px; }
-        .context-menu { position: absolute; background: white; border: 1px solid #ddd; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); z-index: 1000; }
-        .context-menu-item { padding: 8px 15px; cursor: pointer; }
-        .context-menu-item:hover { background: #f0f0f0; }
+        .panel { display: flex; gap: 20px; margin-bottom: 20px; }
+        #database-list, #object-store-list { width: 200px; border: 1px solid #ddd; padding: 10px; }
+        #data-viewer { flex: 1; border: 1px solid #ddd; padding: 10px; }
+        .list-item { padding: 5px; cursor: pointer; }
+        .list-item:hover { background-color: #f0f0f0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        textarea { width: 100%; height: 100px; }
+        button { margin: 5px; padding: 5px 10px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <h1>IndexedDB File Explorer</h1>
+    <h1>IndexedDB Inspector</h1>
     
-    <div id="controls">
-        <div>
-            <select id="db-select"></select>
-            <button id="refresh-dbs">Refresh Databases</button>
+    <div class="panel">
+        <div id="database-list">
+            <h3>Databases</h3>
+            <div id="databases"></div>
         </div>
         
-        <div style="margin-top: 15px;">
-            <input type="text" id="new-item-name" placeholder="Name for new folder/file">
-            <button id="create-folder">New Folder</button>
-            <button id="upload-toggle">Upload Files</button>
-            <button id="delete-item" disabled>Delete Selected</button>
+        <div id="object-store-list">
+            <h3>Object Stores</h3>
+            <div id="object-stores"></div>
         </div>
         
-        <div id="upload-area" style="display: none;">
-            <p>Drag & drop files here or click to browse</p>
-            <input type="file" id="file-input" multiple style="display: none;">
+        <div id="data-viewer">
+            <h3 id="data-viewer-title">Data</h3>
+            <div id="data-content"></div>
+            <div id="edit-form" class="hidden">
+                <textarea id="edit-content"></textarea>
+                <button id="save-changes">Save Changes</button>
+                <button id="cancel-edit">Cancel</button>
+            </div>
         </div>
-    </div>
-    
-    <div class="breadcrumb" id="breadcrumb"></div>
-    
-    <div id="file-explorer"></div>
-    
-    <div id="file-content">
-        <h3 id="content-title"></h3>
-        <div id="content-display"></div>
     </div>
     
     <script>
         // Global variables
-        let db;
-        let currentDbName = '';
-        let currentPath = [];
-        let selectedItem = null;
+        let currentDB = null;
+        let currentStore = null;
+        let currentRecord = null;
         
-        // Initialize the explorer
+        // Initialize the inspector
         document.addEventListener('DOMContentLoaded', () => {
-            // Setup event listeners
-            document.getElementById('refresh-dbs').addEventListener('click', loadDatabases);
-            document.getElementById('db-select').addEventListener('change', onDatabaseSelect);
-            document.getElementById('create-folder').addEventListener('click', createFolder);
-            document.getElementById('upload-toggle').addEventListener('click', toggleUploadArea);
-            document.getElementById('delete-item').addEventListener('click', deleteSelectedItem);
+            refreshDatabaseList();
             
-            // File upload handling
-            const uploadArea = document.getElementById('upload-area');
-            const fileInput = document.getElementById('file-input');
-            
-            uploadArea.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', handleFileUpload);
-            
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('highlight');
-            });
-            
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('highlight');
-            });
-            
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('highlight');
-                if (e.dataTransfer.files.length > 0) {
-                    handleFileUpload({ target: { files: e.dataTransfer.files } });
-                }
-            });
-            
-            // Load initial databases
-            loadDatabases();
+            // Event listeners
+            document.getElementById('save-changes').addEventListener('click', saveChanges);
+            document.getElementById('cancel-edit').addEventListener('click', cancelEdit);
         });
         
-        // Load all available databases
-        async function loadDatabases() {
-            const dbSelect = document.getElementById('db-select');
-            dbSelect.innerHTML = '<option value="">Select a database</option>';
+        // Refresh list of databases
+        function refreshDatabaseList() {
+            const databasesDiv = document.getElementById('databases');
+            databasesDiv.innerHTML = '';
             
-            try {
-                const databases = await window.indexedDB.databases();
-                
-                databases.forEach(dbInfo => {
-                    const option = document.createElement('option');
-                    option.value = dbInfo.name;
-                    option.textContent = `${dbInfo.name} (v${dbInfo.version})`;
-                    dbSelect.appendChild(option);
+            // Get list of databases
+            const request = indexedDB.databases();
+            
+            request.then(dbs => {
+                dbs.forEach(db => {
+                    const dbItem = document.createElement('div');
+                    dbItem.className = 'list-item';
+                    dbItem.textContent = db.name;
+                    dbItem.setAttribute('data-name', db.name);
+                    dbItem.setAttribute('data-version', db.version);
+                    
+                    dbItem.addEventListener('click', () => {
+                        openDatabase(db.name, db.version);
+                    });
+                    
+                    databasesDiv.appendChild(dbItem);
                 });
-            } catch (error) {
-                console.error('Error loading databases:', error);
-                alert('Error loading databases: ' + error.message);
-            }
+            }).catch(error => {
+                console.error('Error getting database list:', error);
+                databasesDiv.innerHTML = '<div>Error loading databases</div>';
+            });
         }
         
-        // When a database is selected
-        function onDatabaseSelect(e) {
-            currentDbName = e.target.value;
-            if (!currentDbName) return;
+        // Open a specific database
+        function openDatabase(name, version) {
+            const request = indexedDB.open(name, version);
             
-            openDatabase(currentDbName);
-        }
-        
-        // Open the selected database
-        function openDatabase(dbName) {
-            const request = indexedDB.open(dbName);
+            request.onsuccess = (event) => {
+                currentDB = event.target.result;
+                displayObjectStores();
+            };
             
             request.onerror = (event) => {
                 console.error('Database error:', event.target.error);
-                alert('Error opening database: ' + event.target.error);
-            };
-            
-            request.onsuccess = (event) => {
-                db = event.target.result;
-                currentPath = []; // Reset to root
-                loadFiles();
-            };
-            
-            request.onupgradeneeded = (event) => {
-                // This shouldn't happen since we're not requesting a version upgrade
-                console.warn('Database upgrade needed');
+                alert('Failed to open database');
             };
         }
         
-        // Load files for current path
-        function loadFiles() {
-            if (!db) return;
+        // Display object stores for the current database
+        function displayObjectStores() {
+            const storesDiv = document.getElementById('object-stores');
+            storesDiv.innerHTML = '';
             
-            const transaction = db.transaction(['files'], 'readonly');
-            const store = transaction.objectStore('files');
-            const index = store.index('path');
-            const request = index.getAll(IDBKeyRange.only(currentPath));
+            if (!currentDB) return;
+            
+            const storeNames = Array.from(currentDB.objectStoreNames);
+            
+            if (storeNames.length === 0) {
+                storesDiv.innerHTML = '<div>No object stores</div>';
+                return;
+            }
+            
+            storeNames.forEach(storeName => {
+                const storeItem = document.createElement('div');
+                storeItem.className = 'list-item';
+                storeItem.textContent = storeName;
+                storeItem.setAttribute('data-name', storeName);
+                
+                storeItem.addEventListener('click', () => {
+                    currentStore = storeName;
+                    displayStoreData();
+                });
+                
+                storesDiv.appendChild(storeItem);
+            });
+        }
+        
+        // Display data from the current object store
+        function displayStoreData() {
+            const contentDiv = document.getElementById('data-content');
+            contentDiv.innerHTML = '';
+            document.getElementById('data-viewer-title').textContent = `Data: ${currentStore}`;
+            
+            if (!currentDB || !currentStore) return;
+            
+            const transaction = currentDB.transaction(currentStore, 'readonly');
+            const store = transaction.objectStore(currentStore);
+            const request = store.getAll();
             
             request.onsuccess = () => {
-                const files = request.result;
-                displayFiles(files);
-                updateBreadcrumb();
+                const data = request.result;
+                
+                if (data.length === 0) {
+                    contentDiv.innerHTML = '<div>No records found</div>';
+                    return;
+                }
+                
+                // Create table
+                const table = document.createElement('table');
+                
+                // Create header row
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                
+                // Get all unique property names
+                const allKeys = new Set();
+                data.forEach(item => {
+                    Object.keys(item).forEach(key => allKeys.add(key));
+                });
+                
+                // Add headers
+                Array.from(allKeys).forEach(key => {
+                    const th = document.createElement('th');
+                    th.textContent = key;
+                    headerRow.appendChild(th);
+                });
+                
+                // Add action header
+                const actionTh = document.createElement('th');
+                actionTh.textContent = 'Actions';
+                headerRow.appendChild(actionTh);
+                
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+                
+                // Create body
+                const tbody = document.createElement('tbody');
+                
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    
+                    // Add data cells
+                    Array.from(allKeys).forEach(key => {
+                        const td = document.createElement('td');
+                        const value = item[key];
+                        
+                        if (value instanceof Blob) {
+                            td.textContent = `[Blob ${value.type}]`;
+                        } else if (typeof value === 'object' && value !== null) {
+                            td.textContent = JSON.stringify(value);
+                        } else {
+                            td.textContent = value;
+                        }
+                        
+                        row.appendChild(td);
+                    });
+                    
+                    // Add action buttons
+                    const actionTd = document.createElement('td');
+                    
+                    const editButton = document.createElement('button');
+                    editButton.textContent = 'Edit';
+                    editButton.addEventListener('click', () => editRecord(item));
+                    actionTd.appendChild(editButton);
+                    
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.addEventListener('click', () => deleteRecord(item));
+                    actionTd.appendChild(deleteButton);
+                    
+                    row.appendChild(actionTd);
+                    tbody.appendChild(row);
+                });
+                
+                table.appendChild(tbody);
+                contentDiv.appendChild(table);
             };
             
             request.onerror = () => {
-                console.error('Error loading files');
+                contentDiv.innerHTML = '<div>Error loading data</div>';
             };
         }
         
-        // Display files in the explorer
-        function displayFiles(files) {
-            const explorer = document.getElementById('file-explorer');
-            explorer.innerHTML = '';
+        // Edit a record
+        function editRecord(record) {
+            currentRecord = record;
+            const editContent = document.getElementById('edit-content');
             
-            // Filter files for current path and sort (directories first)
-            const currentFiles = files.filter(file => 
-                JSON.stringify(file.path) === JSON.stringify(currentPath)
-            ).sort((a, b) => {
-                if (a.isDirectory && !b.isDirectory) return -1;
-                if (!a.isDirectory && b.isDirectory) return 1;
-                return a.name.localeCompare(b.name);
-            });
+            // Try to get key path
+            let keyPath = null;
+            try {
+                const store = currentDB.transaction(currentStore).objectStore(currentStore);
+                keyPath = store.keyPath;
+            } catch (e) {
+                console.warn('Could not determine key path:', e);
+            }
             
-            if (currentFiles.length === 0) {
-                explorer.innerHTML = '<p>This folder is empty</p>';
+            // Prepare data for editing (exclude key path if it exists)
+            const dataToEdit = {...record};
+            if (keyPath && typeof keyPath === 'string') {
+                delete dataToEdit[keyPath];
+            } else if (keyPath && Array.isArray(keyPath)) {
+                keyPath.forEach(k => delete dataToEdit[k]);
+            }
+            
+            editContent.value = JSON.stringify(dataToEdit, null, 2);
+            document.getElementById('edit-form').classList.remove('hidden');
+            document.getElementById('data-content').classList.add('hidden');
+        }
+        
+        // Save changes to a record
+        function saveChanges() {
+            if (!currentDB || !currentStore || !currentRecord) return;
+            
+            try {
+                const editedData = JSON.parse(document.getElementById('edit-content').value);
+                const transaction = currentDB.transaction(currentStore, 'readwrite');
+                const store = transaction.objectStore(currentStore);
+                
+                // Merge changes with original record (preserving key)
+                const updatedRecord = {...currentRecord, ...editedData};
+                
+                const request = store.put(updatedRecord);
+                
+                request.onsuccess = () => {
+                    cancelEdit();
+                    displayStoreData();
+                };
+                
+                request.onerror = () => {
+                    alert('Error saving changes');
+                };
+            } catch (e) {
+                alert('Invalid JSON: ' + e.message);
+            }
+        }
+        
+        // Cancel editing
+        function cancelEdit() {
+            document.getElementById('edit-form').classList.add('hidden');
+            document.getElementById('data-content').classList.remove('hidden');
+            currentRecord = null;
+        }
+        
+        // Delete a record
+        function deleteRecord(record) {
+            if (!currentDB || !currentStore || !confirm('Are you sure you want to delete this record?')) {
                 return;
             }
             
-            currentFiles.forEach(file => {
-                const fileItem = document.createElement('div');
-                fileItem.className = `file-item ${file.isDirectory ? 'directory' : 'file'}`;
-                fileItem.dataset.id = file.id;
-                
-                fileItem.innerHTML = `
-                    <span class="file-icon">${file.isDirectory ? '📁' : '📄'}</span>
-                    <span>${file.name}${file.isDirectory ? '/' : ''}</span>
-                `;
-                
-                fileItem.addEventListener('click', () => {
-                    // Remove selection from other items
-                    document.querySelectorAll('.file-item').forEach(item => {
-                        item.classList.remove('selected');
-                    });
-                    
-                    // Add selection to clicked item
-                    fileItem.classList.add('selected');
-                    selectedItem = file;
-                    document.getElementById('delete-item').disabled = false;
-                    
-                    if (file.isDirectory) {
-                        // Navigate into directory
-                        currentPath = [...file.path, file.name];
-                        loadFiles();
-                    } else {
-                        // Display file content
-                        displayFileContent(file);
-                    }
-                });
-                
-                // Context menu for right-click
-                fileItem.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    showContextMenu(e, file);
-                });
-                
-                explorer.appendChild(fileItem);
-            });
-        }
-        
-        // Update the breadcrumb navigation
-        function updateBreadcrumb() {
-            const breadcrumb = document.getElementById('breadcrumb');
-            breadcrumb.innerHTML = '';
+            const transaction = currentDB.transaction(currentStore, 'readwrite');
+            const store = transaction.objectStore(currentStore);
             
-            // Root item
-            const rootItem = document.createElement('span');
-            rootItem.className = 'breadcrumb-item';
-            rootItem.textContent = 'root';
-            rootItem.addEventListener('click', () => {
-                currentPath = [];
-                loadFiles();
-            });
-            breadcrumb.appendChild(rootItem);
+            // Try to get key path
+            let keyPath = null;
+            try {
+                keyPath = store.keyPath;
+            } catch (e) {
+                console.warn('Could not determine key path:', e);
+            }
             
-            // Path items
-            currentPath.forEach((segment, index) => {
-                const separator = document.createElement('span');
-                separator.className = 'breadcrumb-separator';
-                separator.textContent = '/';
-                breadcrumb.appendChild(separator);
-                
-                const pathItem = document.createElement('span');
-                pathItem.className = 'breadcrumb-item';
-                pathItem.textContent = segment;
-                
-                const pathToHere = currentPath.slice(0, index + 1);
-                pathItem.addEventListener('click', () => {
-                    currentPath = pathToHere;
-                    loadFiles();
-                });
-                
-                breadcrumb.appendChild(pathItem);
-            });
-        }
-        
-        // Display file content
-        function displayFileContent(file) {
-            document.getElementById('content-title').textContent = file.name;
-            const contentDisplay = document.getElementById('content-display');
-            
-            if (file.type && file.type.startsWith('image/')) {
-                contentDisplay.innerHTML = `<img src="${URL.createObjectURL(new Blob([file.content]))}" style="max-width: 100%;">`;
-            } else if (typeof file.content === 'string') {
-                contentDisplay.textContent = file.content;
+            let key;
+            if (keyPath && typeof keyPath === 'string') {
+                key = record[keyPath];
+            } else if (keyPath && Array.isArray(keyPath)) {
+                key = keyPath.map(k => record[k]);
             } else {
-                // For binary data that's not an image
-                contentDisplay.innerHTML = '<p>Binary file - ' + file.size + ' bytes</p>';
-            }
-        }
-        
-        // Create a new folder
-        function createFolder() {
-            const folderName = document.getElementById('new-item-name').value.trim();
-            if (!folderName) {
-                alert('Please enter a folder name');
-                return;
+                // If no key path, try using the record itself as key
+                key = record;
             }
             
-            if (!db) {
-                alert('No database selected');
-                return;
-            }
+            const request = store.delete(key);
             
-            const transaction = db.transaction(['files'], 'readwrite');
-            const store = transaction.objectStore('files');
-            
-            // Check if name already exists in this path
-            const checkRequest = store.index('path').getAll(IDBKeyRange.only(currentPath));
-            
-            checkRequest.onsuccess = () => {
-                const existingItems = checkRequest.result;
-                const nameExists = existingItems.some(item => 
-                    item.name === folderName && item.path === currentPath
-                );
-                
-                if (nameExists) {
-                    alert('An item with this name already exists in this location');
-                    return;
-                }
-                
-                // Add the new folder
-                const addRequest = store.add({
-                    name: folderName,
-                    path: currentPath,
-                    isDirectory: true,
-                    content: '',
-                    created: new Date(),
-                    modified: new Date()
-                });
-                
-                addRequest.onsuccess = () => {
-                    document.getElementById('new-item-name').value = '';
-                    loadFiles();
-                };
-                
-                addRequest.onerror = () => {
-                    console.error('Error creating folder');
-                };
-            };
-        }
-        
-        // Toggle the upload area visibility
-        function toggleUploadArea() {
-            const uploadArea = document.getElementById('upload-area');
-            uploadArea.style.display = uploadArea.style.display === 'none' ? 'block' : 'none';
-        }
-        
-        // Handle file uploads
-        function handleFileUpload(event) {
-            if (!db) {
-                alert('No database selected');
-                return;
-            }
-            
-            const files = event.target.files;
-            if (!files || files.length === 0) return;
-            
-            const transaction = db.transaction(['files'], 'readwrite');
-            const store = transaction.objectStore('files');
-            
-            Array.from(files).forEach(file => {
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    const content = e.target.result;
-                    
-                    // Check if file already exists
-                    const checkRequest = store.index('path').getAll(IDBKeyRange.only(currentPath));
-                    
-                    checkRequest.onsuccess = () => {
-                        const existingItems = checkRequest.result;
-                        const nameExists = existingItems.some(item => 
-                            item.name === file.name && item.path === currentPath
-                        );
-                        
-                        if (nameExists) {
-                            if (!confirm(`"${file.name}" already exists. Overwrite?`)) {
-                                return;
-                            }
-                            
-                            // Find and update existing file
-                            const existingFile = existingItems.find(item => item.name === file.name);
-                            if (existingFile) {
-                                existingFile.content = content;
-                                existingFile.size = file.size;
-                                existingFile.type = file.type;
-                                existingFile.modified = new Date();
-                                
-                                const updateRequest = store.put(existingFile);
-                                updateRequest.onsuccess = () => {
-                                    loadFiles();
-                                };
-                            }
-                        } else {
-                            // Add new file
-                            const addRequest = store.add({
-                                name: file.name,
-                                path: currentPath,
-                                isDirectory: false,
-                                content: content,
-                                size: file.size,
-                                type: file.type,
-                                created: new Date(),
-                                modified: new Date()
-                            });
-                            
-                            addRequest.onsuccess = () => {
-                                loadFiles();
-                            };
-                        }
-                    };
-                };
-                
-                if (file.type && file.type.startsWith('text/')) {
-                    reader.readAsText(file);
-                } else {
-                    reader.readAsArrayBuffer(file);
-                }
-            });
-            
-            // Reset file input
-            event.target.value = '';
-            document.getElementById('upload-area').style.display = 'none';
-        }
-        
-        // Delete the selected item
-        function deleteSelectedItem() {
-            if (!selectedItem || !db) return;
-            
-            if (!confirm(`Are you sure you want to delete "${selectedItem.name}"?`)) {
-                return;
-            }
-            
-            const transaction = db.transaction(['files'], 'readwrite');
-            const store = transaction.objectStore('files');
-            
-            if (selectedItem.isDirectory) {
-                // Check if directory is empty
-                const checkRequest = store.index('path').getAll(
-                    IDBKeyRange.only([...selectedItem.path, selectedItem.name])
-                );
-                
-                checkRequest.onsuccess = () => {
-                    if (checkRequest.result.length > 0) {
-                        alert('Cannot delete non-empty directory');
-                    } else {
-                        const deleteRequest = store.delete(selectedItem.id);
-                        deleteRequest.onsuccess = () => {
-                            selectedItem = null;
-                            document.getElementById('delete-item').disabled = true;
-                            loadFiles();
-                        };
-                    }
-                };
-            } else {
-                // Delete file
-                const deleteRequest = store.delete(selectedItem.id);
-                deleteRequest.onsuccess = () => {
-                    selectedItem = null;
-                    document.getElementById('delete-item').disabled = true;
-                    document.getElementById('content-title').textContent = '';
-                    document.getElementById('content-display').innerHTML = '';
-                    loadFiles();
-                };
-            }
-        }
-        
-        // Show context menu
-        function showContextMenu(e, file) {
-            // Remove any existing context menu
-            const existingMenu = document.querySelector('.context-menu');
-            if (existingMenu) existingMenu.remove();
-            
-            // Create new menu
-            const menu = document.createElement('div');
-            menu.className = 'context-menu';
-            menu.style.left = `${e.pageX}px`;
-            menu.style.top = `${e.pageY}px`;
-            
-            // Add menu items
-            const downloadItem = document.createElement('div');
-            downloadItem.className = 'context-menu-item';
-            downloadItem.textContent = 'Download';
-            downloadItem.addEventListener('click', () => downloadFile(file));
-            menu.appendChild(downloadItem);
-            
-            const deleteItem = document.createElement('div');
-            deleteItem.className = 'context-menu-item';
-            deleteItem.textContent = 'Delete';
-            deleteItem.addEventListener('click', () => {
-                selectedItem = file;
-                deleteSelectedItem();
-                menu.remove();
-            });
-            menu.appendChild(deleteItem);
-            
-            if (!file.isDirectory) {
-                const renameItem = document.createElement('div');
-                renameItem.className = 'context-menu-item';
-                renameItem.textContent = 'Rename';
-                renameItem.addEventListener('click', () => renameFile(file));
-                menu.appendChild(renameItem);
-            }
-            
-            document.body.appendChild(menu);
-            
-            // Close menu when clicking elsewhere
-            const closeMenu = () => {
-                menu.remove();
-                document.removeEventListener('click', closeMenu);
+            request.onsuccess = () => {
+                displayStoreData();
             };
             
-            setTimeout(() => {
-                document.addEventListener('click', closeMenu);
-            }, 100);
-        }
-        
-        // Download a file
-        function downloadFile(file) {
-            let blob;
-            if (file.content instanceof ArrayBuffer || file.content instanceof Blob) {
-                blob = new Blob([file.content], { type: file.type });
-            } else {
-                blob = new Blob([file.content], { type: 'text/plain' });
-            }
-            
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = file.name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-        
-        // Rename a file
-        function renameFile(file) {
-            const newName = prompt('Enter new name:', file.name);
-            if (!newName || newName.trim() === '') return;
-            
-            const transaction = db.transaction(['files'], 'readwrite');
-            const store = transaction.objectStore('files');
-            
-            // Check if name already exists in this path
-            const checkRequest = store.index('path').getAll(IDBKeyRange.only(file.path));
-            
-            checkRequest.onsuccess = () => {
-                const existingItems = checkRequest.result;
-                const nameExists = existingItems.some(item => 
-                    item.name === newName && item.id !== file.id
-                );
-                
-                if (nameExists) {
-                    alert('An item with this name already exists in this location');
-                    return;
-                }
-                
-                // Update the file
-                file.name = newName;
-                file.modified = new Date();
-                
-                const updateRequest = store.put(file);
-                updateRequest.onsuccess = () => {
-                    loadFiles();
-                };
+            request.onerror = () => {
+                alert('Error deleting record');
             };
         }
     </script>
