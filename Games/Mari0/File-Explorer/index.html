@@ -1,491 +1,296 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Storage Explorer</title>
+    <title>IndexedDB File Explorer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #4285f4;
+            --hover-color: #e8f0fe;
+            --border-color: #dadce0;
+            --text-color: #202124;
+            --secondary-text: #5f6368;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', Arial, sans-serif;
+            margin: 0;
             padding: 20px;
-            line-height: 1.6;
+            color: var(--text-color);
         }
-        .storage-section {
-            margin-bottom: 30px;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 5px;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        h2 {
-            color: #444;
-            margin-top: 0;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
-        }
-        ul {
-            list-style-type: none;
-            padding-left: 0;
-        }
-        li {
-            margin: 8px 0;
-            padding: 8px;
-            background-color: #f9f9f9;
-            border-radius: 3px;
-        }
-        .database {
+        
+        .database-header {
             font-weight: bold;
             margin-top: 15px;
-            background-color: #e6f3ff;
-            padding: 10px;
+            color: var(--primary-color);
         }
-        .store {
+        
+        .store-header {
             margin-left: 20px;
-            background-color: #f0f7ff;
-            padding: 8px;
+            color: #34a853;
         }
-        .entry {
-            margin-left: 40px;
-            background-color: #f9f9f9;
-            padding: 6px;
+        
+        .file-item {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            margin-left: 40px;
+            padding: 6px 0;
+            font-family: 'Roboto Mono', monospace;
         }
-        .key-value {
-            display: flex;
-            flex-direction: column;
-            margin-right: 10px;
+        
+        .file-path {
+            flex-grow: 1;
         }
-        .key {
-            font-weight: bold;
-            color: #333;
-        }
-        .value {
-            color: #666;
-            font-size: 0.9em;
-            word-break: break-all;
-            max-width: 600px;
-        }
-        .actions {
-            display: flex;
-            gap: 5px;
-        }
-        button {
-            padding: 5px 10px;
-            font-size: 12px;
+        
+        .edit-button {
+            margin-left: 10px;
+            padding: 4px 8px;
+            background: #f1f3f4;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
             cursor: pointer;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            background-color: #f5f5f5;
         }
-        button:hover {
-            background-color: #e9e9e9;
+        
+        .edit-button:hover {
+            background: #e8f0fe;
         }
-        .edit-btn {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
+        
+        .preview-pane {
+            margin-top: 20px;
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
         }
-        .edit-btn:hover {
-            background-color: #45a049;
+        
+        .preview-title {
+            font-weight: 500;
+            margin-bottom: 8px;
         }
-        .delete-btn {
-            background-color: #f44336;
-            color: white;
-            border: none;
-        }
-        .delete-btn:hover {
-            background-color: #d32f2f;
-        }
-        .refresh-btn {
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            margin-bottom: 15px;
-        }
-        .refresh-btn:hover {
-            background-color: #0b7dda;
-        }
-        .empty-message {
-            color: #777;
-            font-style: italic;
-        }
-        .json-viewer {
-            background-color: #f5f5f5;
+        
+        .preview-content {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            background: #f8f9fa;
             padding: 8px;
             border-radius: 4px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            margin-top: 5px;
-            max-height: 200px;
-            overflow-y: auto;
+        }
+        
+        button {
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>Web Storage Explorer</h1>
+    <h1>IndexedDB Explorer</h1>
     
-    <button class="refresh-btn" onclick="refreshAll()">Refresh All Data</button>
+    <button id="refreshBtn">
+        <span class="material-icons">refresh</span>
+        Refresh
+    </button>
     
-    <section class="storage-section" id="local-storage">
-        <h2>Local Storage</h2>
-        <ul id="local-storage-list">
-            <!-- Local storage items will be displayed here -->
-        </ul>
-    </section>
-
-    <section class="storage-section" id="indexeddb">
-        <h2>IndexedDB</h2>
-        <ul id="indexeddb-list">
-            <!-- IndexedDB data will be displayed here -->
-        </ul>
-    </section>
+    <div id="databaseContainer"></div>
+    
+    <div class="preview-pane" id="previewPane">
+        <div class="preview-title">Preview</div>
+        <div class="preview-content" id="previewContent">Select an item to preview</div>
+    </div>
 
     <script>
-        // Display Local Storage Items
-        function displayLocalStorage() {
-            const localStorageList = document.getElementById("local-storage-list");
-            localStorageList.innerHTML = ''; // Clear existing items
-            
-            if (localStorage.length === 0) {
-                const li = document.createElement("li");
-                li.textContent = "No items in Local Storage";
-                li.classList.add("empty-message");
-                localStorageList.appendChild(li);
-                return;
-            }
-            
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                const value = localStorage.getItem(key);
+    document.addEventListener('DOMContentLoaded', function() {
+        const databaseContainer = document.getElementById('databaseContainer');
+        const previewContent = document.getElementById('previewContent');
+        const refreshBtn = document.getElementById('refreshBtn');
+        
+        refreshBtn.addEventListener('click', refreshDatabases);
+        
+        async function refreshDatabases() {
+            try {
+                databaseContainer.innerHTML = '';
                 
-                const li = document.createElement("li");
-                li.classList.add("entry");
+                // Get all databases
+                const databases = await indexedDB.databases();
                 
-                const keyValueDiv = document.createElement("div");
-                keyValueDiv.classList.add("key-value");
-                
-                const keySpan = document.createElement("span");
-                keySpan.classList.add("key");
-                keySpan.textContent = key;
-                
-                const valueDiv = document.createElement("div");
-                valueDiv.classList.add("value");
-                
-                try {
-                    // Try to parse as JSON for better display
-                    const parsedValue = JSON.parse(value);
-                    valueDiv.textContent = "Value:";
-                    const jsonViewer = document.createElement("pre");
-                    jsonViewer.classList.add("json-viewer");
-                    jsonViewer.textContent = JSON.stringify(parsedValue, null, 2);
-                    valueDiv.appendChild(jsonViewer);
-                } catch (e) {
-                    valueDiv.textContent = `Value: ${value}`;
-                }
-                
-                keyValueDiv.appendChild(keySpan);
-                keyValueDiv.appendChild(valueDiv);
-                li.appendChild(keyValueDiv);
-                
-                const actionsDiv = document.createElement("div");
-                actionsDiv.classList.add("actions");
-                
-                // Create "Edit" button
-                const editButton = document.createElement("button");
-                editButton.textContent = "Edit";
-                editButton.classList.add("edit-btn");
-                editButton.onclick = function() {
-                    editData(key, 'localStorage');
-                };
-                
-                // Create "Delete" button
-                const deleteButton = document.createElement("button");
-                deleteButton.textContent = "Delete";
-                deleteButton.classList.add("delete-btn");
-                deleteButton.onclick = function() {
-                    if (confirm(`Are you sure you want to delete "${key}" from Local Storage?`)) {
-                        localStorage.removeItem(key);
-                        displayLocalStorage();
-                    }
-                };
-                
-                actionsDiv.appendChild(editButton);
-                actionsDiv.appendChild(deleteButton);
-                li.appendChild(actionsDiv);
-                
-                localStorageList.appendChild(li);
-            }
-        }
-
-        // Display IndexedDB Items - Get all databases
-        function displayIndexedDB() {
-            const indexeddbList = document.getElementById("indexeddb-list");
-            indexeddbList.innerHTML = ''; // Clear existing items
-
-            const request = indexedDB.databases();
-
-            request.then(databases => {
                 if (databases.length === 0) {
-                    const li = document.createElement("li");
-                    li.textContent = "No IndexedDB databases found.";
-                    li.classList.add("empty-message");
-                    indexeddbList.appendChild(li);
-                } else {
-                    databases.forEach(db => {
-                        const dbName = db.name;
-                        const dbVersion = db.version;
-                        
-                        const dbEntry = document.createElement("li");
-                        dbEntry.classList.add("database");
-                        dbEntry.textContent = `Database: ${dbName} (Version: ${dbVersion})`;
-                        indexeddbList.appendChild(dbEntry);
-
-                        // Open the database to get object stores
-                        const openRequest = indexedDB.open(dbName, dbVersion);
-
-                        openRequest.onsuccess = function(event) {
-                            const dbInstance = event.target.result;
-                            const objectStoreNames = dbInstance.objectStoreNames;
-
-                            // Convert the DOMStringList to an array and iterate over it
-                            const storeNamesArray = Array.from(objectStoreNames);
-                            
-                            if (storeNamesArray.length === 0) {
-                                const emptyStore = document.createElement("li");
-                                emptyStore.classList.add("store");
-                                emptyStore.textContent = "No object stores in this database";
-                                dbEntry.appendChild(emptyStore);
-                                return;
-                            }
-
-                            storeNamesArray.forEach(storeName => {
-                                const storeEntry = document.createElement("li");
-                                storeEntry.classList.add("store");
-                                storeEntry.textContent = `Store: ${storeName}`;
-                                dbEntry.appendChild(storeEntry);
-
-                                // Open a transaction for the store to access its data
-                                const transaction = dbInstance.transaction(storeName, "readonly");
-                                const objectStore = transaction.objectStore(storeName);
-
-                                // Using getAll to get all entries in the store
-                                const getAllRequest = objectStore.getAll();
-
-                                getAllRequest.onsuccess = function(event) {
-                                    const entries = event.target.result;
-                                    
-                                    if (entries.length === 0) {
-                                        const emptyEntry = document.createElement("li");
-                                        emptyEntry.classList.add("entry");
-                                        emptyEntry.textContent = "No entries in this store";
-                                        storeEntry.appendChild(emptyEntry);
-                                        return;
-                                    }
-
-                                    entries.forEach((entry, index) => {
-                                        const entryItem = document.createElement("li");
-                                        entryItem.classList.add("entry");
-                                        
-                                        const keyValueDiv = document.createElement("div");
-                                        keyValueDiv.classList.add("key-value");
-                                        
-                                        // Get the key (either from the key path or the key itself)
-                                        let key;
-                                        if (objectStore.keyPath) {
-                                            // If the store has a key path, use it to get the key
-                                            key = entry[objectStore.keyPath];
-                                        } else {
-                                            // Otherwise, we need to get the key separately
-                                            // This is more complex and requires another request
-                                            const keyRequest = objectStore.getAllKeys();
-                                            keyRequest.onsuccess = function(keyEvent) {
-                                                const keys = keyEvent.target.result;
-                                                if (keys && keys[index]) {
-                                                    const keySpan = entryItem.querySelector('.key');
-                                                    if (keySpan) {
-                                                        keySpan.textContent = `Key: ${keys[index]}`;
-                                                    }
-                                                }
-                                            };
-                                            key = "Auto-generated key";
-                                        }
-                                        
-                                        const keySpan = document.createElement("span");
-                                        keySpan.classList.add("key");
-                                        keySpan.textContent = `Key: ${key}`;
-                                        
-                                        const valueDiv = document.createElement("div");
-                                        valueDiv.classList.add("value");
-                                        valueDiv.textContent = "Value:";
-                                        
-                                        const jsonViewer = document.createElement("pre");
-                                        jsonViewer.classList.add("json-viewer");
-                                        jsonViewer.textContent = JSON.stringify(entry, null, 2);
-                                        
-                                        keyValueDiv.appendChild(keySpan);
-                                        keyValueDiv.appendChild(valueDiv);
-                                        valueDiv.appendChild(jsonViewer);
-                                        entryItem.appendChild(keyValueDiv);
-                                        
-                                        const actionsDiv = document.createElement("div");
-                                        actionsDiv.classList.add("actions");
-                                        
-                                        // Create "Edit" button
-                                        const editButton = document.createElement("button");
-                                        editButton.textContent = "Edit";
-                                        editButton.classList.add("edit-btn");
-                                        editButton.onclick = function() {
-                                            editData(key, 'indexedDB', dbName, storeName, entry);
-                                        };
-                                        
-                                        // Create "Delete" button
-                                        const deleteButton = document.createElement("button");
-                                        deleteButton.textContent = "Delete";
-                                        deleteButton.classList.add("delete-btn");
-                                        deleteButton.onclick = function() {
-                                            if (confirm(`Are you sure you want to delete this entry from ${storeName}?`)) {
-                                                deleteIndexedDBEntry(dbName, storeName, key);
-                                            }
-                                        };
-                                        
-                                        actionsDiv.appendChild(editButton);
-                                        actionsDiv.appendChild(deleteButton);
-                                        entryItem.appendChild(actionsDiv);
-                                        
-                                        storeEntry.appendChild(entryItem);
-                                    });
-                                };
-
-                                getAllRequest.onerror = function() {
-                                    const errorItem = document.createElement("li");
-                                    errorItem.classList.add("entry");
-                                    errorItem.textContent = "Error retrieving data from store.";
-                                    storeEntry.appendChild(errorItem);
-                                };
-                            });
-                        };
-
-                        openRequest.onerror = function() {
-                            const errorItem = document.createElement("li");
-                            errorItem.classList.add("database");
-                            errorItem.textContent = `Error opening database: ${dbName}`;
-                            indexeddbList.appendChild(errorItem);
-                        };
-                    });
+                    databaseContainer.innerHTML = '<p>No IndexedDB databases found.</p>';
+                    return;
                 }
-            }).catch(error => {
-                const li = document.createElement("li");
-                li.textContent = "Error fetching IndexedDB databases: " + error;
-                indexeddbList.appendChild(li);
-            });
-        }
-
-        // Function to delete an entry from IndexedDB
-        function deleteIndexedDBEntry(dbName, storeName, key) {
-            const openRequest = indexedDB.open(dbName);
-            
-            openRequest.onsuccess = function(event) {
-                const db = event.target.result;
-                const transaction = db.transaction(storeName, "readwrite");
-                const store = transaction.objectStore(storeName);
                 
-                const deleteRequest = store.delete(key);
-                
-                deleteRequest.onsuccess = function() {
-                    alert("Entry deleted successfully!");
-                    displayIndexedDB(); // Refresh the display
-                };
-                
-                deleteRequest.onerror = function() {
-                    alert("Error deleting entry.");
-                };
-            };
-            
-            openRequest.onerror = function() {
-                alert("Error opening database.");
-            };
-        }
-
-        // Function to handle editing data
-        function editData(key, storageType, dbName = null, storeName = null, currentValue = null) {
-            if (!key) {
-                alert("No key provided for editing.");
-                return;
-            }
-
-            let newValue;
-            
-            if (storageType === 'localStorage') {
-                const currentValue = localStorage.getItem(key);
-                newValue = prompt(`Edit value for key "${key}"`, currentValue);
-                
-                if (newValue !== null) {
-                    localStorage.setItem(key, newValue);
-                    alert("LocalStorage data updated!");
-                    displayLocalStorage(); // Refresh the display
-                }
-            } else if (storageType === 'indexedDB' && dbName && storeName) {
-                try {
-                    // Stringify the current value for editing
-                    const currentValueStr = JSON.stringify(currentValue, null, 2);
-                    newValue = prompt(`Edit value for key "${key}" in ${storeName}`, currentValueStr);
+                databases.forEach(db => {
+                    if (!db.name) return;
                     
-                    if (newValue !== null) {
-                        // Try to parse the new value as JSON
-                        let parsedValue;
-                        try {
-                            parsedValue = JSON.parse(newValue);
-                        } catch (e) {
-                            // If not valid JSON, use as plain string
-                            parsedValue = newValue;
+                    // Create database header
+                    const dbHeader = document.createElement('div');
+                    dbHeader.className = 'database-header';
+                    dbHeader.textContent = `Database: ${db.name}`;
+                    databaseContainer.appendChild(dbHeader);
+                    
+                    // Open the database to get object stores
+                    const request = indexedDB.open(db.name);
+                    
+                    request.onsuccess = function(event) {
+                        const dbInstance = event.target.result;
+                        const storeNames = Array.from(dbInstance.objectStoreNames);
+                        
+                        if (storeNames.length === 0) {
+                            const noStores = document.createElement('p');
+                            noStores.textContent = 'No object stores in this database';
+                            noStores.style.marginLeft = '20px';
+                            databaseContainer.appendChild(noStores);
+                            return;
                         }
                         
-                        const openRequest = indexedDB.open(dbName);
-                        
-                        openRequest.onsuccess = function(event) {
-                            const db = event.target.result;
-                            const transaction = db.transaction(storeName, "readwrite");
+                        storeNames.forEach(storeName => {
+                            // Create store header
+                            const storeHeader = document.createElement('div');
+                            storeHeader.className = 'store-header';
+                            storeHeader.textContent = `Store: ${storeName}`;
+                            databaseContainer.appendChild(storeHeader);
+                            
+                            // Get all items in the store
+                            const transaction = dbInstance.transaction(storeName, 'readonly');
                             const store = transaction.objectStore(storeName);
+                            const getAllRequest = store.getAll();
                             
-                            const updateRequest = store.put(parsedValue, key);
-                            
-                            updateRequest.onsuccess = function() {
-                                alert(`IndexedDB data for ${key} updated successfully!`);
-                                displayIndexedDB(); // Refresh the display
+                            getAllRequest.onsuccess = function(event) {
+                                const items = event.target.result;
+                                
+                                if (items.length === 0) {
+                                    const noItems = document.createElement('p');
+                                    noItems.textContent = 'No items in this store';
+                                    noItems.style.marginLeft = '40px';
+                                    databaseContainer.appendChild(noItems);
+                                    return;
+                                }
+                                
+                                items.forEach(item => {
+                                    const fileItem = document.createElement('div');
+                                    fileItem.className = 'file-item';
+                                    
+                                    // Create full path
+                                    const path = `${db.name}/${storeName}/${getItemName(item)}`;
+                                    
+                                    // Create path display
+                                    const pathSpan = document.createElement('span');
+                                    pathSpan.className = 'file-path';
+                                    pathSpan.textContent = path;
+                                    
+                                    // Create edit button
+                                    const editButton = document.createElement('button');
+                                    editButton.className = 'edit-button';
+                                    editButton.textContent = 'Edit Data';
+                                    editButton.onclick = function() {
+                                        editItem(db.name, storeName, item);
+                                    };
+                                    
+                                    // Add click handler for preview
+                                    pathSpan.onclick = function() {
+                                        previewItem(item);
+                                    };
+                                    pathSpan.style.cursor = 'pointer';
+                                    
+                                    fileItem.appendChild(pathSpan);
+                                    fileItem.appendChild(editButton);
+                                    databaseContainer.appendChild(fileItem);
+                                });
                             };
-                            
-                            updateRequest.onerror = function() {
-                                alert("Error updating IndexedDB data.");
-                            };
-                        };
+                        });
                         
-                        openRequest.onerror = function() {
-                            alert("Error opening IndexedDB database.");
-                        };
-                    }
-                } catch (error) {
-                    alert("Error editing data: " + error.message);
-                }
+                        dbInstance.close();
+                    };
+                    
+                    request.onerror = function(event) {
+                        console.error('Error opening database:', event.target.error);
+                        const errorMsg = document.createElement('p');
+                        errorMsg.textContent = `Error opening database: ${db.name}`;
+                        errorMsg.style.color = '#d32f2f';
+                        databaseContainer.appendChild(errorMsg);
+                    };
+                });
+                
+            } catch (error) {
+                console.error('Error listing databases:', error);
+                databaseContainer.innerHTML = `<p style="color: #d32f2f">Error: ${error.message}</p>`;
             }
         }
-
-        // Function to refresh all data
-        function refreshAll() {
-            displayLocalStorage();
-            displayIndexedDB();
+        
+        function getItemName(item) {
+            if (typeof item === 'object' && item !== null) {
+                // Check for common name properties
+                const nameKeys = ['name', 'fileName', 'filename', 'title', 'id', 'key'];
+                for (const key of nameKeys) {
+                    if (item[key] !== undefined) {
+                        return item[key];
+                    }
+                }
+                // If no name property, stringify the object
+                return JSON.stringify(item).slice(0, 50) + '...';
+            }
+            return item;
         }
-
-        // Initial display
-        document.addEventListener('DOMContentLoaded', function() {
-            displayLocalStorage();
-            displayIndexedDB();
-        });
+        
+        function previewItem(item) {
+            try {
+                previewContent.textContent = JSON.stringify(item, null, 2);
+            } catch (error) {
+                previewContent.textContent = `Error displaying item: ${error.message}`;
+            }
+        }
+        
+        function editItem(dbName, storeName, item) {
+            const currentValue = JSON.stringify(item, null, 2);
+            const newValue = prompt(`Edit data for ${getItemName(item)}:`, currentValue);
+            
+            if (newValue === null) return;
+            
+            try {
+                const parsedValue = JSON.parse(newValue);
+                const request = indexedDB.open(dbName);
+                
+                request.onsuccess = function(event) {
+                    const db = event.target.result;
+                    const transaction = db.transaction(storeName, 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    
+                    // Determine if we're updating by key or putting new value
+                    let updateRequest;
+                    if (item.key !== undefined) {
+                        updateRequest = store.put(parsedValue, item.key);
+                    } else if (item.id !== undefined) {
+                        updateRequest = store.put(parsedValue, item.id);
+                    } else {
+                        updateRequest = store.put(parsedValue);
+                    }
+                    
+                    updateRequest.onsuccess = function() {
+                        alert('Item updated successfully!');
+                        refreshDatabases();
+                    };
+                    
+                    updateRequest.onerror = function(event) {
+                        alert(`Error updating item: ${event.target.error}`);
+                    };
+                };
+                
+                request.onerror = function(event) {
+                    alert(`Error opening database: ${event.target.error}`);
+                };
+            } catch (error) {
+                alert(`Error parsing JSON: ${error.message}`);
+            }
+        }
+        
+        // Initial load
+        refreshDatabases();
+    });
     </script>
 </body>
 </html>
