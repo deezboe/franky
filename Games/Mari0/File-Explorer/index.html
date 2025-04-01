@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IndexedDB File Explorer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #file-explorer { border: 1px solid #ddd; padding: 10px; margin-top: 10px; }
+        .file-item { padding: 5px; cursor: pointer; }
+        .file-item:hover { background-color: #f0f0f0; }
+        .directory { font-weight: bold; }
+        button { margin: 5px; padding: 5px 10px; }
+        #file-content { margin-top: 10px; border: 1px solid #ddd; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>IndexedDB File Explorer</h1>
+    
+    <div>
+        <input type="text" id="fileName" placeholder="File name">
+        <textarea id="fileContent" placeholder="File content"></textarea>
+        <button id="addFile">Add File</button>
+        <button id="addFolder">Add Folder</button>
+        <button id="deleteItem">Delete</button>
+    </div>
+    
+    <div id="file-explorer"></div>
+    <div id="file-content"></div>
+    
+    <script src="explorer.js"></script>
+</body>
+</html>
