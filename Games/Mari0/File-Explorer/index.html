@@ -119,6 +119,10 @@
             color: #ea4335;
         }
         
+        .image-icon {
+            color: #fbbc04;
+        }
+        
         .preview-pane {
             border-top: 1px solid var(--border-color);
             padding: 16px;
@@ -138,6 +142,11 @@
             background: #f8f9fa;
             padding: 8px;
             border-radius: 4px;
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
         }
         
         button {
@@ -360,24 +369,26 @@
             }
         }
         
-        // Create an object element
+        // Create an object element with enhanced file name detection
         function createObjectElement(dbName, storeName, item, index) {
             const element = document.createElement('div');
             element.className = 'file-item';
             
-            // Try to get a meaningful name or ID for the object
-            let displayName = `Item ${index + 1}`;
-            if (item.id !== undefined) displayName = `ID: ${item.id}`;
-            else if (item.name !== undefined) displayName = item.name;
-            else if (item.key !== undefined) displayName = `Key: ${item.key}`;
-            else if (item.fileName !== undefined) displayName = item.fileName;
-            else if (item.filename !== undefined) displayName = item.filename;
-            else if (item.title !== undefined) displayName = item.title;
+            // Enhanced file name detection
+            let displayName = getDisplayName(item, index);
+            let iconType = 'object-icon';
+            let icon = 'insert_drive_file';
+            
+            // Check if this is an image file
+            if (isImageItem(item)) {
+                iconType = 'image-icon';
+                icon = 'image';
+            }
             
             element.innerHTML = `
-                <span class="file-icon material-icons object-icon">insert_drive_file</span>
+                <span class="file-icon material-icons ${iconType}">${icon}</span>
                 <span class="file-name">${displayName}</span>
-                <span class="file-meta">${typeof item}</span>
+                <span class="file-meta">${getTypeDescription(item)}</span>
             `;
             
             element.addEventListener('click', () => {
@@ -386,6 +397,51 @@
             });
             
             return element;
+        }
+        
+        // Enhanced function to get display name for files
+        function getDisplayName(item, index) {
+            // Check for common file name properties (case insensitive)
+            const nameKeys = ['fileName', 'filename', 'name', 'title', 'imageName', 'imgName', 'file'];
+            for (const key of nameKeys) {
+                if (item[key] !== undefined) {
+                    return item[key];
+                }
+            }
+            
+            // Check for keys with 'name' or 'file' in them
+            for (const key in item) {
+                if (key.toLowerCase().includes('name') || key.toLowerCase().includes('file')) {
+                    return item[key];
+                }
+            }
+            
+            // Fallback to ID or key if available
+            if (item.id !== undefined) return `ID: ${item.id}`;
+            if (item.key !== undefined) return `Key: ${item.key}`;
+            
+            // Final fallback
+            return `Item ${index + 1}`;
+        }
+        
+        // Check if item is an image
+        function isImageItem(item) {
+            if (typeof item === 'object' && item !== null) {
+                // Check for common image properties
+                if (item.type && item.type.startsWith('image/')) return true;
+                if (item.url && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.url)) return true;
+                if (item.fileName && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.fileName)) return true;
+                if (item.name && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.name)) return true;
+            }
+            return false;
+        }
+        
+        // Get type description for an item
+        function getTypeDescription(item) {
+            if (isImageItem(item)) return 'Image';
+            if (typeof item === 'string') return 'Text';
+            if (typeof item === 'object' && item !== null) return 'Object';
+            return typeof item;
         }
         
         // Select an item in the file list
@@ -405,10 +461,49 @@
         // Preview an object's contents
         function previewObject(obj) {
             try {
+                if (isImageItem(obj)) {
+                    // Special handling for image preview
+                    let imageUrl = '';
+                    if (obj.url) {
+                        imageUrl = obj.url;
+                    } else if (obj.data) {
+                        // Handle base64 or blob data
+                        imageUrl = typeof obj.data === 'string' ? obj.data : URL.createObjectURL(obj.data);
+                    }
+                    
+                    if (imageUrl) {
+                        previewContent.innerHTML = `
+                            <div>Image Preview:</div>
+                            <img src="${imageUrl}" class="image-preview" alt="Preview">
+                            <div style="margin-top: 10px;">Metadata:</div>
+                            <pre>${JSON.stringify(removeLargeProperties(obj), null, 2)}</pre>
+                        `;
+                        return;
+                    }
+                }
+                
+                // Default JSON preview
                 previewContent.textContent = JSON.stringify(obj, null, 2);
             } catch (error) {
                 previewContent.textContent = `Unable to display object: ${error.message}`;
             }
+        }
+        
+        // Helper to remove large properties (like binary data) for preview
+        function removeLargeProperties(obj) {
+            if (typeof obj !== 'object' || obj === null) return obj;
+            
+            const result = {};
+            for (const key in obj) {
+                if (typeof obj[key] === 'string' && obj[key].length > 100) {
+                    result[key] = `[${obj[key].length} characters of data]`;
+                } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                    result[key] = removeLargeProperties(obj[key]);
+                } else {
+                    result[key] = obj[key];
+                }
+            }
+            return result;
         }
         
         // Delete the selected item
