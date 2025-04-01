@@ -1,226 +1,145 @@
-// Initialize the database
-let db;
-const dbName = "FileExplorerDB";
-const storeName = "files";
-const dbVersion = 1;
-
-// Current path (like a directory structure)
-let currentPath = [];
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Open or create the database
-    const request = indexedDB.open(dbName, dbVersion);
+document.addEventListener('DOMContentLoaded', function() {
+    const databaseSelect = document.getElementById('databaseSelect');
+    const storeSelect = document.getElementById('storeSelect');
+    const refreshDbs = document.getElementById('refreshDbs');
+    const fileContents = document.getElementById('fileContents');
     
-    request.onupgradeneeded = (event) => {
-        db = event.target.result;
-        if (!db.objectStoreNames.contains(storeName)) {
-            const store = db.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true });
-            store.createIndex('path', 'path', { unique: false });
-            store.createIndex('name', 'name', { unique: false });
-            store.createIndex('isDirectory', 'isDirectory', { unique: false });
+    // Refresh database list
+    refreshDbs.addEventListener('click', refreshDatabases);
+    
+    // When database selection changes, load its object stores
+    databaseSelect.addEventListener('change', function() {
+        const dbName = this.value;
+        if (dbName) {
+            loadObjectStores(dbName);
+        }
+    });
+    
+    // When object store selection changes, load its contents
+    storeSelect.addEventListener('change', function() {
+        const dbName = databaseSelect.value;
+        const storeName = this.value;
+        if (dbName && storeName) {
+            loadStoreContents(dbName, storeName);
+        }
+    });
+    
+    // Initial load
+    refreshDatabases();
+    
+    // Function to refresh the list of databases
+    function refreshDatabases() {
+        return new Promise((resolve) => {
+            // This is a hack since there's no direct API to list all databases
+            // In a real app, you might want to maintain your own registry
+            const request = indexedDB.databases();
             
-            // Add root directory
-            const transaction = event.target.transaction;
-            transaction.objectStore(storeName).add({
-                name: 'root',
-                path: [],
-                isDirectory: true,
-                content: '',
-                date: new Date()
+            request.then(databases => {
+                databaseSelect.innerHTML = '';
+                databaseSelect.appendChild(new Option('Select database', ''));
+                
+                databases.forEach(db => {
+                    if (db.name) {
+                        databaseSelect.appendChild(new Option(db.name, db.name));
+                    }
+                });
+                
+                resolve();
+            }).catch(error => {
+                console.error('Error listing databases:', error);
+                fileContents.innerHTML = `<p>Error: ${error.message}</p>`;
+                resolve();
             });
-        }
-    };
-    
-    request.onsuccess = (event) => {
-        db = event.target.result;
-        loadFiles(currentPath);
-    };
-    
-    request.onerror = (event) => {
-        console.error("Database error:", event.target.error);
-    };
-    
-    // Event listeners
-    document.getElementById('addFile').addEventListener('click', addFile);
-    document.getElementById('addFolder').addEventListener('click', addFolder);
-    document.getElementById('deleteItem').addEventListener('click', deleteItem);
-});
-
-function loadFiles(path) {
-    const transaction = db.transaction(storeName, 'readonly');
-    const store = transaction.objectStore(storeName);
-    const index = store.index('path');
-    const request = index.getAll(IDBKeyRange.only(path));
-    
-    request.onsuccess = () => {
-        const files = request.result;
-        displayFiles(files);
-    };
-    
-    request.onerror = () => {
-        console.error("Error loading files");
-    };
-}
-
-function displayFiles(files) {
-    const explorer = document.getElementById('file-explorer');
-    explorer.innerHTML = '';
-    
-    // Display path navigation
-    const pathNav = document.createElement('div');
-    let pathHTML = '<span class="path-item" data-path="[]">root</span>';
-    
-    currentPath.forEach((dir, index) => {
-        const pathToHere = currentPath.slice(0, index + 1);
-        pathHTML += ` / <span class="path-item" data-path="${JSON.stringify(pathToHere)}">${dir}</span>`;
-    });
-    
-    pathNav.innerHTML = pathHTML;
-    explorer.appendChild(pathNav);
-    
-    // Add click handlers for path navigation
-    document.querySelectorAll('.path-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            const path = JSON.parse(e.target.getAttribute('data-path'));
-            currentPath = path;
-            loadFiles(currentPath);
         });
-    });
+    }
     
-    // Display files and directories
-    files.forEach(file => {
-        if (file.path.join('/') === currentPath.join('/')) {
-            const fileItem = document.createElement('div');
-            fileItem.className = `file-item ${file.isDirectory ? 'directory' : 'file'}`;
-            fileItem.textContent = file.name + (file.isDirectory ? '/' : '');
-            fileItem.setAttribute('data-id', file.id);
+    // Function to load object stores for a selected database
+    function loadObjectStores(dbName) {
+        return new Promise((resolve) => {
+            const request = indexedDB.open(dbName);
             
-            if (file.isDirectory) {
-                fileItem.addEventListener('click', () => {
-                    currentPath = [...file.path, file.name];
-                    loadFiles(currentPath);
-                });
-            } else {
-                fileItem.addEventListener('click', () => {
-                    displayFileContent(file);
-                });
-            }
-            
-            explorer.appendChild(fileItem);
-        }
-    });
-}
-
-function displayFileContent(file) {
-    const contentDiv = document.getElementById('file-content');
-    contentDiv.innerHTML = `
-        <h3>${file.name}</h3>
-        <p>${file.content}</p>
-        <p><small>Last modified: ${new Date(file.date).toLocaleString()}</small></p>
-    `;
-    
-    // Update the form fields for editing
-    document.getElementById('fileName').value = file.name;
-    document.getElementById('fileContent').value = file.content;
-    document.getElementById('deleteItem').setAttribute('data-id', file.id);
-}
-
-function addFile() {
-    const name = document.getElementById('fileName').value.trim();
-    const content = document.getElementById('fileContent').value;
-    
-    if (!name) {
-        alert('Please enter a file name');
-        return;
-    }
-    
-    const transaction = db.transaction(storeName, 'readwrite');
-    const store = transaction.objectStore(storeName);
-    
-    store.add({
-        name: name,
-        path: [...currentPath],
-        isDirectory: false,
-        content: content,
-        date: new Date()
-    });
-    
-    transaction.oncomplete = () => {
-        document.getElementById('fileName').value = '';
-        document.getElementById('fileContent').value = '';
-        loadFiles(currentPath);
-    };
-}
-
-function addFolder() {
-    const name = document.getElementById('fileName').value.trim();
-    
-    if (!name) {
-        alert('Please enter a folder name');
-        return;
-    }
-    
-    const transaction = db.transaction(storeName, 'readwrite');
-    const store = transaction.objectStore(storeName);
-    
-    store.add({
-        name: name,
-        path: [...currentPath],
-        isDirectory: true,
-        content: '',
-        date: new Date()
-    });
-    
-    transaction.oncomplete = () => {
-        document.getElementById('fileName').value = '';
-        document.getElementById('fileContent').value = '';
-        loadFiles(currentPath);
-    };
-}
-
-function deleteItem() {
-    const id = parseInt(document.getElementById('deleteItem').getAttribute('data-id'));
-    
-    if (!id) {
-        alert('No item selected to delete');
-        return;
-    }
-    
-    if (!confirm('Are you sure you want to delete this item?')) {
-        return;
-    }
-    
-    const transaction = db.transaction(storeName, 'readwrite');
-    const store = transaction.objectStore(storeName);
-    
-    // First check if it's a directory and has contents
-    const getRequest = store.get(id);
-    
-    getRequest.onsuccess = () => {
-        const item = getRequest.result;
-        
-        if (item.isDirectory) {
-            // Check if directory is empty
-            const index = store.index('path');
-            const pathToCheck = [...item.path, item.name];
-            const checkRequest = index.getAll(IDBKeyRange.only(pathToCheck));
-            
-            checkRequest.onsuccess = () => {
-                if (checkRequest.result.length > 0) {
-                    alert('Cannot delete non-empty directory');
-                } else {
-                    store.delete(id);
-                }
+            request.onerror = (event) => {
+                console.error('Error opening database:', event.target.error);
+                fileContents.innerHTML = `<p>Error: ${event.target.error.message}</p>`;
+                resolve();
             };
-        } else {
-            store.delete(id);
-        }
-    };
+            
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                const storeNames = db.objectStoreNames;
+                
+                storeSelect.innerHTML = '';
+                storeSelect.appendChild(new Option('Select object store', ''));
+                
+                for (let i = 0; i < storeNames.length; i++) {
+                    storeSelect.appendChild(new Option(storeNames[i], storeNames[i]));
+                }
+                
+                db.close();
+                resolve();
+            };
+        });
+    }
     
-    transaction.oncomplete = () => {
-        document.getElementById('fileName').value = '';
-        document.getElementById('fileContent').value = '';
-        document.getElementById('deleteItem').removeAttribute('data-id');
-        loadFiles(currentPath);
-    };
-}
+    // Function to load contents of an object store
+    function loadStoreContents(dbName, storeName) {
+        const request = indexedDB.open(dbName);
+        
+        request.onerror = (event) => {
+            console.error('Error opening database:', event.target.error);
+            fileContents.innerHTML = `<p>Error: ${event.target.error.message}</p>`;
+        };
+        
+        request.onsuccess = (event) => {
+            const db = event.target.result;
+            const transaction = db.transaction(storeName, 'readonly');
+            const store = transaction.objectStore(storeName);
+            const getAllRequest = store.getAll();
+            
+            getAllRequest.onerror = (event) => {
+                console.error('Error reading store:', event.target.error);
+                fileContents.innerHTML = `<p>Error: ${event.target.error.message}</p>`;
+                db.close();
+            };
+            
+            getAllRequest.onsuccess = (event) => {
+                const items = event.target.result;
+                
+                if (items.length === 0) {
+                    fileContents.innerHTML = '<p>No items found in this store.</p>';
+                } else {
+                    // Create a table to display the data
+                    let html = '<table><thead><tr>';
+                    
+                    // Add headers (assuming all items have same structure)
+                    if (items.length > 0) {
+                        const firstItem = items[0];
+                        for (const key in firstItem) {
+                            html += `<th>${key}</th>`;
+                        }
+                        html += '</tr></thead><tbody>';
+                        
+                        // Add rows
+                        items.forEach(item => {
+                            html += '<tr>';
+                            for (const key in firstItem) {
+                                let value = item[key];
+                                if (typeof value === 'object') {
+                                    value = JSON.stringify(value);
+                                }
+                                html += `<td>${value}</td>`;
+                            }
+                            html += '</tr>';
+                        });
+                        
+                        html += '</tbody></table>';
+                    }
+                    
+                    fileContents.innerHTML = html;
+                }
+                
+                db.close();
+            };
+        };
+    }
+});
