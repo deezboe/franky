@@ -163,6 +163,19 @@
         button:hover {
             background-color: #f1f3f4;
         }
+        
+        .edit-button {
+            margin-left: 10px;
+            padding: 2px 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .path-display {
+            font-family: 'Roboto Mono', monospace;
+            color: var(--secondary-text);
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -181,6 +194,10 @@
                 <button id="deleteBtn" disabled>
                     <span class="material-icons">delete</span>
                     Delete
+                </button>
+                <button id="editBtn" disabled>
+                    <span class="material-icons">edit</span>
+                    Edit
                 </button>
                 <div class="breadcrumbs" id="breadcrumbs">
                     <span>IndexedDB</span>
@@ -204,6 +221,7 @@
         const previewContent = document.getElementById('previewContent');
         const refreshBtn = document.getElementById('refreshBtn');
         const deleteBtn = document.getElementById('deleteBtn');
+        const editBtn = document.getElementById('editBtn');
         
         let currentPath = [];
         let selectedItem = null;
@@ -211,6 +229,7 @@
         // Initialize the explorer
         refreshBtn.addEventListener('click', refreshDatabases);
         deleteBtn.addEventListener('click', deleteSelectedItem);
+        editBtn.addEventListener('click', editSelectedItem);
         
         // Initial load
         refreshDatabases();
@@ -304,14 +323,19 @@
             }
         }
         
-        // Create an object store element
+        // Create an object store element with path display
         function createStoreElement(dbName, storeName) {
             const element = document.createElement('div');
             element.className = 'file-item';
+            
+            // Create the full path display
+            const fullPath = `${dbName}/${storeName}`;
+            
             element.innerHTML = `
                 <span class="file-icon material-icons store-icon">folder</span>
                 <span class="file-name">${storeName}</span>
                 <span class="file-meta">Object Store</span>
+                <span class="path-display">${fullPath}</span>
             `;
             
             element.addEventListener('click', () => {
@@ -369,7 +393,7 @@
             }
         }
         
-        // Create an object element with enhanced file name detection
+        // Create an object element with enhanced path display
         function createObjectElement(dbName, storeName, item, index) {
             const element = document.createElement('div');
             element.className = 'file-item';
@@ -385,18 +409,42 @@
                 icon = 'image';
             }
             
+            // Create the full path display
+            const fullPath = `${dbName}/${storeName}/${displayName}`;
+            
             element.innerHTML = `
                 <span class="file-icon material-icons ${iconType}">${icon}</span>
                 <span class="file-name">${displayName}</span>
                 <span class="file-meta">${getTypeDescription(item)}</span>
+                <span class="path-display">${fullPath}</span>
+                <button class="edit-button" data-key="${displayName}">Edit Data</button>
             `;
             
-            element.addEventListener('click', () => {
-                selectItem(element, { dbName, storeName, item });
-                previewObject(item);
+            // Add click handler for the main element
+            element.addEventListener('click', (e) => {
+                // Don't trigger if clicking on the edit button
+                if (!e.target.classList.contains('edit-button')) {
+                    selectItem(element, { dbName, storeName, item });
+                    previewObject(item);
+                }
+            });
+            
+            // Add click handler for the edit button
+            const editButton = element.querySelector('.edit-button');
+            editButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                editData(displayName, 'indexedDB', dbName, storeName, item);
             });
             
             return element;
+        }
+        
+        // Edit the selected item
+        function editSelectedItem() {
+            if (!selectedItem) return;
+            const { dbName, storeName, item } = selectedItem;
+            const displayName = getDisplayName(item, 0); // Using index 0 since we already have the item
+            editData(displayName, 'indexedDB', dbName, storeName, item);
         }
         
         // Enhanced function to get display name for files
@@ -456,6 +504,7 @@
             element.classList.add('selected');
             selectedItem = itemData;
             deleteBtn.disabled = false;
+            editBtn.disabled = false;
         }
         
         // Preview an object's contents
@@ -486,6 +535,67 @@
                 previewContent.textContent = JSON.stringify(obj, null, 2);
             } catch (error) {
                 previewContent.textContent = `Unable to display object: ${error.message}`;
+            }
+        }
+        
+        // Function to handle editing data (from the second example)
+        function editData(key, storageType, dbName = null, storeName = null, currentValue = null) {
+            if (!key) {
+                alert("No key provided for editing.");
+                return;
+            }
+
+            let newValue;
+            if (typeof currentValue === 'object' && currentValue !== null) {
+                // For objects, show the current JSON in the prompt
+                newValue = prompt("Enter new value for " + key, JSON.stringify(currentValue, null, 2));
+                try {
+                    if (newValue) newValue = JSON.parse(newValue);
+                } catch (e) {
+                    alert("Invalid JSON format");
+                    return;
+                }
+            } else {
+                // For primitive values, use simple prompt
+                newValue = prompt("Enter new value for " + key, currentValue);
+            }
+
+            if (newValue !== null) {
+                if (storageType === 'indexedDB' && dbName && storeName) {
+                    const openRequest = indexedDB.open(dbName, 1); // Open DB with version 1
+
+                    openRequest.onsuccess = function(event) {
+                        const dbInstance = event.target.result;
+                        const transaction = dbInstance.transaction(storeName, "readwrite");
+                        const objectStore = transaction.objectStore(storeName);
+                        
+                        // Check if we're updating by key or need to use put with the full object
+                        let updateRequest;
+                        if (currentValue && currentValue.key) {
+                            // If the object has a key property, use it
+                            updateRequest = objectStore.put(newValue, currentValue.key);
+                        } else {
+                            // Otherwise try to use the key directly
+                            updateRequest = objectStore.put(newValue, key);
+                        }
+
+                        updateRequest.onsuccess = function() {
+                            alert(`IndexedDB data for ${key} updated successfully!`);
+                            // Refresh the current view
+                            if (currentPath.length === 3) {
+                                openObjectStore(dbName, storeName);
+                            }
+                        };
+
+                        updateRequest.onerror = function() {
+                            alert("Error updating IndexedDB data.");
+                        };
+                    };
+
+                    openRequest.onerror = function() {
+                        alert("Error opening IndexedDB database.");
+                    };
+                }
             }
         }
         
@@ -545,6 +655,7 @@
                         previewContent.textContent = 'Item deleted successfully';
                         selectedItem = null;
                         deleteBtn.disabled = true;
+                        editBtn.disabled = true;
                     };
                     
                     transaction.oncomplete = () => {
