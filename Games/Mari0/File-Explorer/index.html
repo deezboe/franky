@@ -16,50 +16,118 @@
         body {
             font-family: 'Roboto', Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             color: var(--text-color);
         }
         
-        .database-header {
-            font-weight: bold;
-            margin-top: 15px;
-            color: var(--primary-color);
+        .container {
+            display: flex;
+            height: 100vh;
         }
         
-        .store-header {
-            margin-left: 20px;
-            color: #34a853;
+        .sidebar {
+            width: 250px;
+            background: #f8f9fa;
+            border-right: 1px solid var(--border-color);
+            padding: 16px;
+            overflow-y: auto;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .toolbar {
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .breadcrumbs {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 14px;
+        }
+        
+        .breadcrumb-sep {
+            margin: 0 4px;
+            color: var(--secondary-text);
+        }
+        
+        .file-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
         }
         
         .file-item {
             display: flex;
             align-items: center;
-            margin-left: 40px;
-            padding: 6px 0;
-            font-family: 'Roboto Mono', monospace;
-        }
-        
-        .file-path {
-            flex-grow: 1;
-        }
-        
-        .edit-button {
-            margin-left: 10px;
-            padding: 4px 8px;
-            background: #f1f3f4;
-            border: 1px solid var(--border-color);
+            padding: 8px;
             border-radius: 4px;
             cursor: pointer;
+            user-select: none;
         }
         
-        .edit-button:hover {
-            background: #e8f0fe;
+        .file-item:hover {
+            background-color: var(--hover-color);
+        }
+        
+        .file-item.selected {
+            background-color: #e2eeff;
+        }
+        
+        .file-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--secondary-text);
+        }
+        
+        .file-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .file-meta {
+            font-size: 12px;
+            color: var(--secondary-text);
+            margin-left: 8px;
+        }
+        
+        .database-icon {
+            color: #4285f4;
+        }
+        
+        .store-icon {
+            color: #34a853;
+        }
+        
+        .object-icon {
+            color: #ea4335;
+        }
+        
+        .image-icon {
+            color: #fbbc04;
         }
         
         .preview-pane {
-            margin-top: 20px;
-            padding: 16px;
             border-top: 1px solid var(--border-color);
+            padding: 16px;
+            max-height: 30%;
+            overflow-y: auto;
         }
         
         .preview-title {
@@ -76,6 +144,11 @@
             border-radius: 4px;
         }
         
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+        }
+        
         button {
             background: none;
             border: 1px solid var(--border-color);
@@ -85,211 +158,566 @@
             display: flex;
             align-items: center;
             gap: 4px;
-            margin-right: 10px;
+        }
+        
+        button:hover {
+            background-color: #f1f3f4;
+        }
+        
+        .edit-button {
+            margin-left: 10px;
+            padding: 2px 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .path-display {
+            font-family: 'Roboto Mono', monospace;
+            color: var(--secondary-text);
+            font-size: 13px;
         }
     </style>
 </head>
 <body>
-    <h1>IndexedDB Explorer</h1>
-    
-    <button id="refreshBtn">
-        <span class="material-icons">refresh</span>
-        Refresh
-    </button>
-    
-    <div id="databaseContainer"></div>
-    
-    <div class="preview-pane" id="previewPane">
-        <div class="preview-title">Preview</div>
-        <div class="preview-content" id="previewContent">Select an item to preview</div>
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <h3>IndexedDB Databases</h3>
+            <div id="databaseTree"></div>
+        </div>
+        
+        <div class="main-content">
+            <div class="toolbar">
+                <button id="refreshBtn">
+                    <span class="material-icons">refresh</span>
+                    Refresh
+                </button>
+                <button id="deleteBtn" disabled>
+                    <span class="material-icons">delete</span>
+                    Delete
+                </button>
+                <button id="editBtn" disabled>
+                    <span class="material-icons">edit</span>
+                    Edit
+                </button>
+                <div class="breadcrumbs" id="breadcrumbs">
+                    <span>IndexedDB</span>
+                </div>
+            </div>
+            
+            <div class="file-list" id="fileList"></div>
+            
+            <div class="preview-pane" id="previewPane">
+                <div class="preview-title">Preview</div>
+                <div class="preview-content" id="previewContent">Select an item to preview</div>
+            </div>
+        </div>
     </div>
-
+    
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const databaseContainer = document.getElementById('databaseContainer');
+        const databaseTree = document.getElementById('databaseTree');
+        const fileList = document.getElementById('fileList');
+        const breadcrumbs = document.getElementById('breadcrumbs');
         const previewContent = document.getElementById('previewContent');
         const refreshBtn = document.getElementById('refreshBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const editBtn = document.getElementById('editBtn');
         
+        let currentPath = [];
+        let selectedItem = null;
+        
+        // Initialize the explorer
         refreshBtn.addEventListener('click', refreshDatabases);
+        deleteBtn.addEventListener('click', deleteSelectedItem);
+        editBtn.addEventListener('click', editSelectedItem);
         
+        // Initial load
+        refreshDatabases();
+        
+        // Function to refresh the list of databases
         async function refreshDatabases() {
             try {
-                databaseContainer.innerHTML = '';
-                
-                // Get all databases
+                // Get list of databases (note: this API isn't available in all browsers)
                 const databases = await indexedDB.databases();
                 
-                if (databases.length === 0) {
-                    databaseContainer.innerHTML = '<p>No IndexedDB databases found.</p>';
-                    return;
+                // Clear current tree
+                databaseTree.innerHTML = '';
+                
+                // Add each database to the tree
+                databases.forEach(db => {
+                    if (db.name) {
+                        const dbElement = createDatabaseElement(db.name);
+                        databaseTree.appendChild(dbElement);
+                    }
+                });
+                
+                // If no databases found
+                if (databaseTree.children.length === 0) {
+                    databaseTree.innerHTML = '<div style="color: var(--secondary-text); padding: 8px;">No databases found</div>';
                 }
                 
-                databases.forEach(db => {
-                    if (!db.name) return;
-                    
-                    // Create database header
-                    const dbHeader = document.createElement('div');
-                    dbHeader.className = 'database-header';
-                    dbHeader.textContent = `Database: ${db.name}`;
-                    databaseContainer.appendChild(dbHeader);
-                    
-                    // Open the database to get object stores
-                    const request = indexedDB.open(db.name);
-                    
-                    request.onsuccess = function(event) {
-                        const dbInstance = event.target.result;
-                        const storeNames = Array.from(dbInstance.objectStoreNames);
-                        
-                        if (storeNames.length === 0) {
-                            const noStores = document.createElement('p');
-                            noStores.textContent = 'No object stores in this database';
-                            noStores.style.marginLeft = '20px';
-                            databaseContainer.appendChild(noStores);
-                            return;
-                        }
-                        
-                        storeNames.forEach(storeName => {
-                            // Create store header
-                            const storeHeader = document.createElement('div');
-                            storeHeader.className = 'store-header';
-                            storeHeader.textContent = `Store: ${storeName}`;
-                            databaseContainer.appendChild(storeHeader);
-                            
-                            // Get all items in the store
-                            const transaction = dbInstance.transaction(storeName, 'readonly');
-                            const store = transaction.objectStore(storeName);
-                            const getAllRequest = store.getAll();
-                            
-                            getAllRequest.onsuccess = function(event) {
-                                const items = event.target.result;
-                                
-                                if (items.length === 0) {
-                                    const noItems = document.createElement('p');
-                                    noItems.textContent = 'No items in this store';
-                                    noItems.style.marginLeft = '40px';
-                                    databaseContainer.appendChild(noItems);
-                                    return;
-                                }
-                                
-                                items.forEach(item => {
-                                    const fileItem = document.createElement('div');
-                                    fileItem.className = 'file-item';
-                                    
-                                    // Create full path
-                                    const path = `${db.name}/${storeName}/${getItemName(item)}`;
-                                    
-                                    // Create path display
-                                    const pathSpan = document.createElement('span');
-                                    pathSpan.className = 'file-path';
-                                    pathSpan.textContent = path;
-                                    
-                                    // Create edit button
-                                    const editButton = document.createElement('button');
-                                    editButton.className = 'edit-button';
-                                    editButton.textContent = 'Edit Data';
-                                    editButton.onclick = function() {
-                                        editItem(db.name, storeName, item);
-                                    };
-                                    
-                                    // Add click handler for preview
-                                    pathSpan.onclick = function() {
-                                        previewItem(item);
-                                    };
-                                    pathSpan.style.cursor = 'pointer';
-                                    
-                                    fileItem.appendChild(pathSpan);
-                                    fileItem.appendChild(editButton);
-                                    databaseContainer.appendChild(fileItem);
-                                });
-                            };
-                        });
-                        
-                        dbInstance.close();
-                    };
-                    
-                    request.onerror = function(event) {
-                        console.error('Error opening database:', event.target.error);
-                        const errorMsg = document.createElement('p');
-                        errorMsg.textContent = `Error opening database: ${db.name}`;
-                        errorMsg.style.color = '#d32f2f';
-                        databaseContainer.appendChild(errorMsg);
-                    };
-                });
+                // Reset view
+                currentPath = [];
+                updateBreadcrumbs();
+                fileList.innerHTML = '<div style="color: var(--secondary-text); padding: 16px; text-align: center;">Select a database from the sidebar</div>';
+                previewContent.textContent = 'Select an item to preview';
                 
             } catch (error) {
                 console.error('Error listing databases:', error);
-                databaseContainer.innerHTML = `<p style="color: #d32f2f">Error: ${error.message}</p>`;
+                showError('Failed to list databases. Make sure you\'re using a supported browser.');
             }
         }
         
-        function getItemName(item) {
-            if (typeof item === 'object' && item !== null) {
-                // Check for common name properties
-                const nameKeys = ['name', 'fileName', 'filename', 'title', 'id', 'key'];
-                for (const key of nameKeys) {
-                    if (item[key] !== undefined) {
-                        return item[key];
-                    }
-                }
-                // If no name property, stringify the object
-                return JSON.stringify(item).slice(0, 50) + '...';
-            }
-            return item;
-        }
-        
-        function previewItem(item) {
-            try {
-                previewContent.textContent = JSON.stringify(item, null, 2);
-            } catch (error) {
-                previewContent.textContent = `Error displaying item: ${error.message}`;
-            }
-        }
-        
-        function editItem(dbName, storeName, item) {
-            const currentValue = JSON.stringify(item, null, 2);
-            const newValue = prompt(`Edit data for ${getItemName(item)}:`, currentValue);
+        // Create a database tree item
+        function createDatabaseElement(dbName) {
+            const element = document.createElement('div');
+            element.className = 'file-item';
+            element.innerHTML = `
+                <span class="file-icon material-icons database-icon">storage</span>
+                <span class="file-name">${dbName}</span>
+            `;
             
-            if (newValue === null) return;
+            element.addEventListener('click', () => {
+                openDatabase(dbName);
+            });
             
+            return element;
+        }
+        
+        // Open a database and show its object stores
+        async function openDatabase(dbName) {
             try {
-                const parsedValue = JSON.parse(newValue);
+                currentPath = ['IndexedDB', dbName];
+                updateBreadcrumbs();
+                
+                // Open the database (just to get structure, we'll close it immediately)
                 const request = indexedDB.open(dbName);
                 
-                request.onsuccess = function(event) {
+                request.onerror = (event) => {
+                    throw event.target.error;
+                };
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    
+                    // Clear file list
+                    fileList.innerHTML = '';
+                    
+                    // Add each object store
+                    for (let i = 0; i < db.objectStoreNames.length; i++) {
+                        const storeName = db.objectStoreNames[i];
+                        const storeElement = createStoreElement(dbName, storeName);
+                        fileList.appendChild(storeElement);
+                    }
+                    
+                    if (db.objectStoreNames.length === 0) {
+                        fileList.innerHTML = '<div style="color: var(--secondary-text); padding: 16px; text-align: center;">No object stores in this database</div>';
+                    }
+                    
+                    db.close();
+                };
+                
+            } catch (error) {
+                console.error('Error opening database:', error);
+                showError(`Failed to open database: ${error.message}`);
+            }
+        }
+        
+        // Create an object store element with path display
+        function createStoreElement(dbName, storeName) {
+            const element = document.createElement('div');
+            element.className = 'file-item';
+            
+            // Create the full path display
+            const fullPath = `${dbName}/${storeName}`;
+            
+            element.innerHTML = `
+                <span class="file-icon material-icons store-icon">folder</span>
+                <span class="file-name">${storeName}</span>
+                <span class="file-meta">Object Store</span>
+                <span class="path-display">${fullPath}</span>
+            `;
+            
+            element.addEventListener('click', () => {
+                openObjectStore(dbName, storeName);
+            });
+            
+            return element;
+        }
+        
+        // Open an object store and show its contents
+        async function openObjectStore(dbName, storeName) {
+            try {
+                currentPath = ['IndexedDB', dbName, storeName];
+                updateBreadcrumbs();
+                
+                const request = indexedDB.open(dbName);
+                
+                request.onerror = (event) => {
+                    throw event.target.error;
+                };
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const transaction = db.transaction(storeName, 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const getAllRequest = store.getAll();
+                    
+                    getAllRequest.onerror = (event) => {
+                        throw event.target.error;
+                    };
+                    
+                    getAllRequest.onsuccess = (event) => {
+                        const items = event.target.result;
+                        
+                        // Clear file list
+                        fileList.innerHTML = '';
+                        
+                        if (items.length === 0) {
+                            fileList.innerHTML = '<div style="color: var(--secondary-text); padding: 16px; text-align: center;">No items in this object store</div>';
+                        } else {
+                            // Add each item
+                            items.forEach((item, index) => {
+                                const itemElement = createObjectElement(dbName, storeName, item, index);
+                                fileList.appendChild(itemElement);
+                            });
+                        }
+                        
+                        db.close();
+                    };
+                };
+                
+            } catch (error) {
+                console.error('Error opening object store:', error);
+                showError(`Failed to open object store: ${error.message}`);
+            }
+        }
+        
+        // Create an object element with enhanced path display
+        function createObjectElement(dbName, storeName, item, index) {
+            const element = document.createElement('div');
+            element.className = 'file-item';
+            
+            // Enhanced file name detection
+            let displayName = getDisplayName(item, index);
+            let iconType = 'object-icon';
+            let icon = 'insert_drive_file';
+            
+            // Check if this is an image file
+            if (isImageItem(item)) {
+                iconType = 'image-icon';
+                icon = 'image';
+            }
+            
+            // Create the full path display
+            const fullPath = `${dbName}/${storeName}/${displayName}`;
+            
+            element.innerHTML = `
+                <span class="file-icon material-icons ${iconType}">${icon}</span>
+                <span class="file-name">${displayName}</span>
+                <span class="file-meta">${getTypeDescription(item)}</span>
+                <span class="path-display">${fullPath}</span>
+                <button class="edit-button" data-key="${displayName}">Edit Data</button>
+            `;
+            
+            // Add click handler for the main element
+            element.addEventListener('click', (e) => {
+                // Don't trigger if clicking on the edit button
+                if (!e.target.classList.contains('edit-button')) {
+                    selectItem(element, { dbName, storeName, item });
+                    previewObject(item);
+                }
+            });
+            
+            // Add click handler for the edit button
+            const editButton = element.querySelector('.edit-button');
+            editButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                editData(displayName, 'indexedDB', dbName, storeName, item);
+            });
+            
+            return element;
+        }
+        
+        // Edit the selected item
+        function editSelectedItem() {
+            if (!selectedItem) return;
+            const { dbName, storeName, item } = selectedItem;
+            const displayName = getDisplayName(item, 0); // Using index 0 since we already have the item
+            editData(displayName, 'indexedDB', dbName, storeName, item);
+        }
+        
+        // Enhanced function to get display name for files
+        function getDisplayName(item, index) {
+            // Check for common file name properties (case insensitive)
+            const nameKeys = ['fileName', 'filename', 'name', 'title', 'imageName', 'imgName', 'file'];
+            for (const key of nameKeys) {
+                if (item[key] !== undefined) {
+                    return item[key];
+                }
+            }
+            
+            // Check for keys with 'name' or 'file' in them
+            for (const key in item) {
+                if (key.toLowerCase().includes('name') || key.toLowerCase().includes('file')) {
+                    return item[key];
+                }
+            }
+            
+            // Fallback to ID or key if available
+            if (item.id !== undefined) return `ID: ${item.id}`;
+            if (item.key !== undefined) return `Key: ${item.key}`;
+            
+            // Final fallback
+            return `Item ${index + 1}`;
+        }
+        
+        // Check if item is an image
+        function isImageItem(item) {
+            if (typeof item === 'object' && item !== null) {
+                // Check for common image properties
+                if (item.type && item.type.startsWith('image/')) return true;
+                if (item.url && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.url)) return true;
+                if (item.fileName && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.fileName)) return true;
+                if (item.name && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.name)) return true;
+            }
+            return false;
+        }
+        
+        // Get type description for an item
+        function getTypeDescription(item) {
+            if (isImageItem(item)) return 'Image';
+            if (typeof item === 'string') return 'Text';
+            if (typeof item === 'object' && item !== null) return 'Object';
+            return typeof item;
+        }
+        
+        // Select an item in the file list
+        function selectItem(element, itemData) {
+            // Deselect previous item
+            const previouslySelected = document.querySelector('.file-item.selected');
+            if (previouslySelected) {
+                previouslySelected.classList.remove('selected');
+            }
+            
+            // Select new item
+            element.classList.add('selected');
+            selectedItem = itemData;
+            deleteBtn.disabled = false;
+            editBtn.disabled = false;
+        }
+        
+        // Preview an object's contents
+        function previewObject(obj) {
+            try {
+                if (isImageItem(obj)) {
+                    // Special handling for image preview
+                    let imageUrl = '';
+                    if (obj.url) {
+                        imageUrl = obj.url;
+                    } else if (obj.data) {
+                        // Handle base64 or blob data
+                        imageUrl = typeof obj.data === 'string' ? obj.data : URL.createObjectURL(obj.data);
+                    }
+                    
+                    if (imageUrl) {
+                        previewContent.innerHTML = `
+                            <div>Image Preview:</div>
+                            <img src="${imageUrl}" class="image-preview" alt="Preview">
+                            <div style="margin-top: 10px;">Metadata:</div>
+                            <pre>${JSON.stringify(removeLargeProperties(obj), null, 2)}</pre>
+                        `;
+                        return;
+                    }
+                }
+                
+                // Default JSON preview
+                previewContent.textContent = JSON.stringify(obj, null, 2);
+            } catch (error) {
+                previewContent.textContent = `Unable to display object: ${error.message}`;
+            }
+        }
+        
+        // Function to handle editing data (from the second example)
+        function editData(key, storageType, dbName = null, storeName = null, currentValue = null) {
+            if (!key) {
+                alert("No key provided for editing.");
+                return;
+            }
+
+            let newValue;
+            if (typeof currentValue === 'object' && currentValue !== null) {
+                // For objects, show the current JSON in the prompt
+                newValue = prompt("Enter new value for " + key, JSON.stringify(currentValue, null, 2));
+                try {
+                    if (newValue) newValue = JSON.parse(newValue);
+                } catch (e) {
+                    alert("Invalid JSON format");
+                    return;
+                }
+            } else {
+                // For primitive values, use simple prompt
+                newValue = prompt("Enter new value for " + key, currentValue);
+            }
+
+            if (newValue !== null) {
+                if (storageType === 'indexedDB' && dbName && storeName) {
+                    const openRequest = indexedDB.open(dbName, 1); // Open DB with version 1
+
+                    openRequest.onsuccess = function(event) {
+                        const dbInstance = event.target.result;
+                        const transaction = dbInstance.transaction(storeName, "readwrite");
+                        const objectStore = transaction.objectStore(storeName);
+                        
+                        // Check if we're updating by key or need to use put with the full object
+                        let updateRequest;
+                        if (currentValue && currentValue.key) {
+                            // If the object has a key property, use it
+                            updateRequest = objectStore.put(newValue, currentValue.key);
+                        } else {
+                            // Otherwise try to use the key directly
+                            updateRequest = objectStore.put(newValue, key);
+                        }
+
+                        updateRequest.onsuccess = function() {
+                            alert(`IndexedDB data for ${key} updated successfully!`);
+                            // Refresh the current view
+                            if (currentPath.length === 3) {
+                                openObjectStore(dbName, storeName);
+                            }
+                        };
+
+                        updateRequest.onerror = function() {
+                            alert("Error updating IndexedDB data.");
+                        };
+                    };
+
+                    openRequest.onerror = function() {
+                        alert("Error opening IndexedDB database.");
+                    };
+                }
+            }
+        }
+        
+        // Helper to remove large properties (like binary data) for preview
+        function removeLargeProperties(obj) {
+            if (typeof obj !== 'object' || obj === null) return obj;
+            
+            const result = {};
+            for (const key in obj) {
+                if (typeof obj[key] === 'string' && obj[key].length > 100) {
+                    result[key] = `[${obj[key].length} characters of data]`;
+                } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                    result[key] = removeLargeProperties(obj[key]);
+                } else {
+                    result[key] = obj[key];
+                }
+            }
+            return result;
+        }
+        
+        // Delete the selected item
+        async function deleteSelectedItem() {
+            if (!selectedItem) return;
+            
+            try {
+                const { dbName, storeName, item } = selectedItem;
+                
+                const request = indexedDB.open(dbName);
+                
+                request.onerror = (event) => {
+                    throw event.target.error;
+                };
+                
+                request.onsuccess = (event) => {
                     const db = event.target.result;
                     const transaction = db.transaction(storeName, 'readwrite');
                     const store = transaction.objectStore(storeName);
                     
-                    // Determine if we're updating by key or putting new value
-                    let updateRequest;
-                    if (item.key !== undefined) {
-                        updateRequest = store.put(parsedValue, item.key);
-                    } else if (item.id !== undefined) {
-                        updateRequest = store.put(parsedValue, item.id);
+                    // Try to delete by key
+                    let deleteRequest;
+                    if (item.id !== undefined) {
+                        deleteRequest = store.delete(item.id);
+                    } else if (item.key !== undefined) {
+                        deleteRequest = store.delete(item.key);
                     } else {
-                        updateRequest = store.put(parsedValue);
+                        // If no obvious key, we can't delete
+                        throw new Error('Cannot determine key for deletion');
                     }
                     
-                    updateRequest.onsuccess = function() {
-                        alert('Item updated successfully!');
-                        refreshDatabases();
+                    deleteRequest.onerror = (event) => {
+                        throw event.target.error;
                     };
                     
-                    updateRequest.onerror = function(event) {
-                        alert(`Error updating item: ${event.target.error}`);
+                    deleteRequest.onsuccess = () => {
+                        // Refresh the view
+                        openObjectStore(dbName, storeName);
+                        previewContent.textContent = 'Item deleted successfully';
+                        selectedItem = null;
+                        deleteBtn.disabled = true;
+                        editBtn.disabled = true;
+                    };
+                    
+                    transaction.oncomplete = () => {
+                        db.close();
                     };
                 };
                 
-                request.onerror = function(event) {
-                    alert(`Error opening database: ${event.target.error}`);
-                };
             } catch (error) {
-                alert(`Error parsing JSON: ${error.message}`);
+                console.error('Error deleting item:', error);
+                showError(`Failed to delete item: ${error.message}`);
             }
         }
         
-        // Initial load
-        refreshDatabases();
+        // Update breadcrumbs navigation
+        function updateBreadcrumbs() {
+            breadcrumbs.innerHTML = '';
+            
+            currentPath.forEach((part, index) => {
+                const isLast = index === currentPath.length - 1;
+                const span = document.createElement('span');
+                
+                if (!isLast) {
+                    span.style.cursor = 'pointer';
+                    span.style.color = 'var(--primary-color)';
+                    span.addEventListener('click', () => {
+                        navigateTo(index);
+                    });
+                }
+                
+                span.textContent = part;
+                breadcrumbs.appendChild(span);
+                
+                if (!isLast) {
+                    const sep = document.createElement('span');
+                    sep.className = 'breadcrumb-sep';
+                    sep.textContent = '/';
+                    breadcrumbs.appendChild(sep);
+                }
+            });
+        }
+        
+        // Navigate to a specific point in the path
+        function navigateTo(index) {
+            const newPath = currentPath.slice(0, index + 1);
+            
+            if (newPath.length === 1) {
+                // Back to root
+                fileList.innerHTML = '<div style="color: var(--secondary-text); padding: 16px; text-align: center;">Select a database from the sidebar</div>';
+                previewContent.textContent = 'Select an item to preview';
+            } else if (newPath.length === 2) {
+                // Database level
+                openDatabase(newPath[1]);
+            } else if (newPath.length === 3) {
+                // Object store level
+                openObjectStore(newPath[1], newPath[2]);
+            }
+        }
+        
+        // Show an error message
+        function showError(message) {
+            fileList.innerHTML = `<div style="color: #d32f2f; padding: 16px; background: #ffebee; border-radius: 4px;">${message}</div>`;
+        }
     });
     </script>
 </body>
