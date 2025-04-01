@@ -1,31 +1,152 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>IndexedDB File Explorer</title>
+    <title>IndexedDB Explorer</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        #file-explorer { border: 1px solid #ddd; padding: 10px; margin-top: 10px; }
-        .file-item { padding: 5px; cursor: pointer; }
-        .file-item:hover { background-color: #f0f0f0; }
-        .directory { font-weight: bold; }
+        .database { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; }
+        .store { margin-left: 20px; margin-bottom: 10px; }
+        .object { margin-left: 40px; padding: 5px; border: 1px solid #eee; background: #f9f9f9; }
         button { margin: 5px; padding: 5px 10px; }
-        #file-content { margin-top: 10px; border: 1px solid #ddd; padding: 10px; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body>
-    <h1>IndexedDB File Explorer</h1>
-    
-    <div>
-        <input type="text" id="fileName" placeholder="File name">
-        <textarea id="fileContent" placeholder="File content"></textarea>
-        <button id="addFile">Add File</button>
-        <button id="addFolder">Add Folder</button>
-        <button id="deleteItem">Delete</button>
-    </div>
-    
-    <div id="file-explorer"></div>
-    <div id="file-content"></div>
-    
-    <script src="explorer.js"></script>
+    <h1>IndexedDB Explorer</h1>
+    <button id="refresh">Refresh Databases</button>
+    <div id="databases"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('refresh').addEventListener('click', exploreDatabases);
+            exploreDatabases();
+        });
+
+        async function exploreDatabases() {
+            const databasesDiv = document.getElementById('databases');
+            databasesDiv.innerHTML = '<p>Loading databases...</p>';
+            
+            try {
+                // Get list of all databases
+                const databases = await window.indexedDB.databases();
+                
+                if (databases.length === 0) {
+                    databasesDiv.innerHTML = '<p>No IndexedDB databases found on this website.</p>';
+                    return;
+                }
+                
+                databasesDiv.innerHTML = '';
+                
+                for (const dbInfo of databases) {
+                    await exploreDatabase(dbInfo.name, dbInfo.version);
+                }
+            } catch (error) {
+                databasesDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+                console.error('Error exploring databases:', error);
+            }
+        }
+
+        async function exploreDatabase(dbName, dbVersion) {
+            return new Promise((resolve, reject) => {
+                const databasesDiv = document.getElementById('databases');
+                const dbDiv = document.createElement('div');
+                dbDiv.className = 'database';
+                dbDiv.innerHTML = `<h2>Database: ${dbName} (v${dbVersion})</h2>`;
+                databasesDiv.appendChild(dbDiv);
+                
+                const request = indexedDB.open(dbName, dbVersion);
+                
+                request.onerror = (event) => {
+                    dbDiv.innerHTML += `<p>Error opening database: ${event.target.error}</p>`;
+                    reject(event.target.error);
+                };
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const storeNames = db.objectStoreNames;
+                    
+                    if (storeNames.length === 0) {
+                        dbDiv.innerHTML += '<p>No object stores in this database.</p>';
+                        db.close();
+                        resolve();
+                        return;
+                    }
+                    
+                    // Explore each object store
+                    Array.from(storeNames).forEach(storeName => {
+                        exploreObjectStore(db, storeName, dbDiv);
+                    });
+                    
+                    db.close();
+                    resolve();
+                };
+            });
+        }
+
+        function exploreObjectStore(db, storeName, dbDiv) {
+            const storeDiv = document.createElement('div');
+            storeDiv.className = 'store';
+            storeDiv.innerHTML = `<h3>Object Store: ${storeName}</h3>`;
+            dbDiv.appendChild(storeDiv);
+            
+            const transaction = db.transaction(storeName, 'readonly');
+            const store = transaction.objectStore(storeName);
+            
+            // Get all objects in the store
+            const request = store.getAll();
+            
+            request.onerror = (event) => {
+                storeDiv.innerHTML += `<p>Error reading store: ${event.target.error}</p>`;
+            };
+            
+            request.onsuccess = (event) => {
+                const objects = event.target.result;
+                
+                if (objects.length === 0) {
+                    storeDiv.innerHTML += '<p>No objects in this store.</p>';
+                    return;
+                }
+                
+                // Get the key path (if any)
+                const keyPath = store.keyPath;
+                storeDiv.innerHTML += `<p>Key path: ${keyPath || 'auto-increment'}</p>`;
+                
+                // Get index information
+                const indexes = store.indexNames;
+                if (indexes.length > 0) {
+                    storeDiv.innerHTML += '<p>Indexes: ' + Array.from(indexes).join(', ') + '</p>';
+                }
+                
+                // Display objects
+                objects.forEach(obj => {
+                    const objectDiv = document.createElement('div');
+                    objectDiv.className = 'object';
+                    
+                    let key;
+                    if (keyPath) {
+                        if (typeof keyPath === 'string') {
+                            key = obj[keyPath];
+                        } else if (Array.isArray(keyPath)) {
+                            key = keyPath.map(k => obj[k]).join('-');
+                        }
+                    } else {
+                        // For auto-increment, we don't have the key in the object
+                        key = 'key-not-shown';
+                    }
+                    
+                    objectDiv.innerHTML = `<h4>Object (key: ${key})</h4>`;
+                    
+                    try {
+                        const prettyJson = JSON.stringify(obj, null, 2);
+                        objectDiv.innerHTML += `<pre>${prettyJson}</pre>`;
+                    } catch (e) {
+                        objectDiv.innerHTML += `<p>Cannot display object (may contain circular references)</p>`;
+                    }
+                    
+                    storeDiv.appendChild(objectDiv);
+                });
+            };
+        }
+    </script>
 </body>
 </html>
