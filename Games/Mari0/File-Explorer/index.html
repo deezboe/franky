@@ -3,53 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Storage Data Display</title>
+    <title>Web Storage Explorer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
+            line-height: 1.6;
         }
-        section {
+        .storage-section {
             margin-bottom: 30px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
         }
         h2 {
-            color: #333;
+            color: #444;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
         }
         ul {
             list-style-type: none;
             padding-left: 0;
         }
         li {
-            margin: 5px 0;
-            color: #555;
+            margin: 8px 0;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border-radius: 3px;
         }
         .database {
             font-weight: bold;
             margin-top: 15px;
+            background-color: #e6f3ff;
+            padding: 10px;
         }
         .store {
             margin-left: 20px;
+            background-color: #f0f7ff;
+            padding: 8px;
         }
         .entry {
             margin-left: 40px;
+            background-color: #f9f9f9;
+            padding: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .edit-button {
-            margin-left: 10px;
+        .key-value {
+            display: flex;
+            flex-direction: column;
+            margin-right: 10px;
+        }
+        .key {
+            font-weight: bold;
+            color: #333;
+        }
+        .value {
+            color: #666;
+            font-size: 0.9em;
+            word-break: break-all;
+            max-width: 600px;
+        }
+        .actions {
+            display: flex;
+            gap: 5px;
+        }
+        button {
             padding: 5px 10px;
             font-size: 12px;
             cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            background-color: #f5f5f5;
+        }
+        button:hover {
+            background-color: #e9e9e9;
+        }
+        .edit-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+        .edit-btn:hover {
+            background-color: #45a049;
+        }
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+        }
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+        .refresh-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin-bottom: 15px;
+        }
+        .refresh-btn:hover {
+            background-color: #0b7dda;
+        }
+        .empty-message {
+            color: #777;
+            font-style: italic;
+        }
+        .json-viewer {
+            background-color: #f5f5f5;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin-top: 5px;
+            max-height: 200px;
+            overflow-y: auto;
         }
     </style>
 </head>
 <body>
-    <section id="local-storage">
+    <h1>Web Storage Explorer</h1>
+    
+    <button class="refresh-btn" onclick="refreshAll()">Refresh All Data</button>
+    
+    <section class="storage-section" id="local-storage">
         <h2>Local Storage</h2>
         <ul id="local-storage-list">
             <!-- Local storage items will be displayed here -->
         </ul>
     </section>
 
-    <section id="indexeddb">
+    <section class="storage-section" id="indexeddb">
         <h2>IndexedDB</h2>
         <ul id="indexeddb-list">
             <!-- IndexedDB data will be displayed here -->
@@ -58,47 +148,106 @@
 
     <script>
         // Display Local Storage Items
-        const localStorageList = document.getElementById("local-storage-list");
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            const li = document.createElement("li");
-            li.textContent = key;
-
-            // Create "Edit Data" button for each Local Storage item
-            const editButton = document.createElement("button");
-            editButton.textContent = "Edit Data";
-            editButton.classList.add("edit-button");
-            editButton.onclick = function() {
-                console.log("Editing LocalStorage Key: ", key); // Debug log for key
-                editData(key, 'localStorage'); // Call editData function with key and storage type
-            };
-            li.appendChild(editButton);
-
-            localStorageList.appendChild(li);
+        function displayLocalStorage() {
+            const localStorageList = document.getElementById("local-storage-list");
+            localStorageList.innerHTML = ''; // Clear existing items
+            
+            if (localStorage.length === 0) {
+                const li = document.createElement("li");
+                li.textContent = "No items in Local Storage";
+                li.classList.add("empty-message");
+                localStorageList.appendChild(li);
+                return;
+            }
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                
+                const li = document.createElement("li");
+                li.classList.add("entry");
+                
+                const keyValueDiv = document.createElement("div");
+                keyValueDiv.classList.add("key-value");
+                
+                const keySpan = document.createElement("span");
+                keySpan.classList.add("key");
+                keySpan.textContent = key;
+                
+                const valueDiv = document.createElement("div");
+                valueDiv.classList.add("value");
+                
+                try {
+                    // Try to parse as JSON for better display
+                    const parsedValue = JSON.parse(value);
+                    valueDiv.textContent = "Value:";
+                    const jsonViewer = document.createElement("pre");
+                    jsonViewer.classList.add("json-viewer");
+                    jsonViewer.textContent = JSON.stringify(parsedValue, null, 2);
+                    valueDiv.appendChild(jsonViewer);
+                } catch (e) {
+                    valueDiv.textContent = `Value: ${value}`;
+                }
+                
+                keyValueDiv.appendChild(keySpan);
+                keyValueDiv.appendChild(valueDiv);
+                li.appendChild(keyValueDiv);
+                
+                const actionsDiv = document.createElement("div");
+                actionsDiv.classList.add("actions");
+                
+                // Create "Edit" button
+                const editButton = document.createElement("button");
+                editButton.textContent = "Edit";
+                editButton.classList.add("edit-btn");
+                editButton.onclick = function() {
+                    editData(key, 'localStorage');
+                };
+                
+                // Create "Delete" button
+                const deleteButton = document.createElement("button");
+                deleteButton.textContent = "Delete";
+                deleteButton.classList.add("delete-btn");
+                deleteButton.onclick = function() {
+                    if (confirm(`Are you sure you want to delete "${key}" from Local Storage?`)) {
+                        localStorage.removeItem(key);
+                        displayLocalStorage();
+                    }
+                };
+                
+                actionsDiv.appendChild(editButton);
+                actionsDiv.appendChild(deleteButton);
+                li.appendChild(actionsDiv);
+                
+                localStorageList.appendChild(li);
+            }
         }
 
         // Display IndexedDB Items - Get all databases
-        const indexeddbList = document.getElementById("indexeddb-list");
+        function displayIndexedDB() {
+            const indexeddbList = document.getElementById("indexeddb-list");
+            indexeddbList.innerHTML = ''; // Clear existing items
 
-        // Function to get all IndexedDB databases and their contents
-        function getIndexedDBData() {
             const request = indexedDB.databases();
 
             request.then(databases => {
                 if (databases.length === 0) {
                     const li = document.createElement("li");
                     li.textContent = "No IndexedDB databases found.";
+                    li.classList.add("empty-message");
                     indexeddbList.appendChild(li);
                 } else {
                     databases.forEach(db => {
                         const dbName = db.name;
+                        const dbVersion = db.version;
+                        
                         const dbEntry = document.createElement("li");
                         dbEntry.classList.add("database");
-                        dbEntry.textContent = `Database: ${dbName}`;
+                        dbEntry.textContent = `Database: ${dbName} (Version: ${dbVersion})`;
                         indexeddbList.appendChild(dbEntry);
 
                         // Open the database to get object stores
-                        const openRequest = indexedDB.open(dbName, db.version);
+                        const openRequest = indexedDB.open(dbName, dbVersion);
 
                         openRequest.onsuccess = function(event) {
                             const dbInstance = event.target.result;
@@ -108,6 +257,10 @@
                             const storeNamesArray = Array.from(objectStoreNames);
                             
                             if (storeNamesArray.length === 0) {
+                                const emptyStore = document.createElement("li");
+                                emptyStore.classList.add("store");
+                                emptyStore.textContent = "No object stores in this database";
+                                dbEntry.appendChild(emptyStore);
                                 return;
                             }
 
@@ -117,40 +270,102 @@
                                 storeEntry.textContent = `Store: ${storeName}`;
                                 dbEntry.appendChild(storeEntry);
 
-                                // Open a transaction for the store to access its keys
+                                // Open a transaction for the store to access its data
                                 const transaction = dbInstance.transaction(storeName, "readonly");
                                 const objectStore = transaction.objectStore(storeName);
 
-                                // Using openCursor to iterate through the store and retrieve keys
-                                const cursorRequest = objectStore.openCursor();
+                                // Using getAll to get all entries in the store
+                                const getAllRequest = objectStore.getAll();
 
-                                cursorRequest.onsuccess = function(event) {
-                                    const cursor = event.target.result;
-                                    if (cursor) {
-                                        console.log("IndexedDB Cursor Key: ", cursor.key); // Debug log for IndexedDB key
+                                getAllRequest.onsuccess = function(event) {
+                                    const entries = event.target.result;
+                                    
+                                    if (entries.length === 0) {
+                                        const emptyEntry = document.createElement("li");
+                                        emptyEntry.classList.add("entry");
+                                        emptyEntry.textContent = "No entries in this store";
+                                        storeEntry.appendChild(emptyEntry);
+                                        return;
+                                    }
+
+                                    entries.forEach((entry, index) => {
                                         const entryItem = document.createElement("li");
                                         entryItem.classList.add("entry");
-                                        entryItem.textContent = cursor.key;
-
-                                        // Create "Edit Data" button for each IndexedDB entry
+                                        
+                                        const keyValueDiv = document.createElement("div");
+                                        keyValueDiv.classList.add("key-value");
+                                        
+                                        // Get the key (either from the key path or the key itself)
+                                        let key;
+                                        if (objectStore.keyPath) {
+                                            // If the store has a key path, use it to get the key
+                                            key = entry[objectStore.keyPath];
+                                        } else {
+                                            // Otherwise, we need to get the key separately
+                                            // This is more complex and requires another request
+                                            const keyRequest = objectStore.getAllKeys();
+                                            keyRequest.onsuccess = function(keyEvent) {
+                                                const keys = keyEvent.target.result;
+                                                if (keys && keys[index]) {
+                                                    const keySpan = entryItem.querySelector('.key');
+                                                    if (keySpan) {
+                                                        keySpan.textContent = `Key: ${keys[index]}`;
+                                                    }
+                                                }
+                                            };
+                                            key = "Auto-generated key";
+                                        }
+                                        
+                                        const keySpan = document.createElement("span");
+                                        keySpan.classList.add("key");
+                                        keySpan.textContent = `Key: ${key}`;
+                                        
+                                        const valueDiv = document.createElement("div");
+                                        valueDiv.classList.add("value");
+                                        valueDiv.textContent = "Value:";
+                                        
+                                        const jsonViewer = document.createElement("pre");
+                                        jsonViewer.classList.add("json-viewer");
+                                        jsonViewer.textContent = JSON.stringify(entry, null, 2);
+                                        
+                                        keyValueDiv.appendChild(keySpan);
+                                        keyValueDiv.appendChild(valueDiv);
+                                        valueDiv.appendChild(jsonViewer);
+                                        entryItem.appendChild(keyValueDiv);
+                                        
+                                        const actionsDiv = document.createElement("div");
+                                        actionsDiv.classList.add("actions");
+                                        
+                                        // Create "Edit" button
                                         const editButton = document.createElement("button");
-                                        editButton.textContent = "Edit Data";
-                                        editButton.classList.add("edit-button");
+                                        editButton.textContent = "Edit";
+                                        editButton.classList.add("edit-btn");
                                         editButton.onclick = function() {
-                                            console.log("Editing IndexedDB Key: ", cursor.key); // Debug log for key
-                                            editData(cursor.key, 'indexedDB', dbName, storeName); // Call editData with key, db, and store name
+                                            editData(key, 'indexedDB', dbName, storeName, entry);
                                         };
-                                        entryItem.appendChild(editButton);
-
+                                        
+                                        // Create "Delete" button
+                                        const deleteButton = document.createElement("button");
+                                        deleteButton.textContent = "Delete";
+                                        deleteButton.classList.add("delete-btn");
+                                        deleteButton.onclick = function() {
+                                            if (confirm(`Are you sure you want to delete this entry from ${storeName}?`)) {
+                                                deleteIndexedDBEntry(dbName, storeName, key);
+                                            }
+                                        };
+                                        
+                                        actionsDiv.appendChild(editButton);
+                                        actionsDiv.appendChild(deleteButton);
+                                        entryItem.appendChild(actionsDiv);
+                                        
                                         storeEntry.appendChild(entryItem);
-                                        cursor.continue();
-                                    }
+                                    });
                                 };
 
-                                cursorRequest.onerror = function() {
+                                getAllRequest.onerror = function() {
                                     const errorItem = document.createElement("li");
                                     errorItem.classList.add("entry");
-                                    errorItem.textContent = "Error retrieving keys from store.";
+                                    errorItem.textContent = "Error retrieving data from store.";
                                     storeEntry.appendChild(errorItem);
                                 };
                             });
@@ -171,48 +386,106 @@
             });
         }
 
-        // Run the function to get IndexedDB data
-        getIndexedDBData();
+        // Function to delete an entry from IndexedDB
+        function deleteIndexedDBEntry(dbName, storeName, key) {
+            const openRequest = indexedDB.open(dbName);
+            
+            openRequest.onsuccess = function(event) {
+                const db = event.target.result;
+                const transaction = db.transaction(storeName, "readwrite");
+                const store = transaction.objectStore(storeName);
+                
+                const deleteRequest = store.delete(key);
+                
+                deleteRequest.onsuccess = function() {
+                    alert("Entry deleted successfully!");
+                    displayIndexedDB(); // Refresh the display
+                };
+                
+                deleteRequest.onerror = function() {
+                    alert("Error deleting entry.");
+                };
+            };
+            
+            openRequest.onerror = function() {
+                alert("Error opening database.");
+            };
+        }
 
         // Function to handle editing data
-        function editData(key, storageType, dbName = null, storeName = null) {
+        function editData(key, storageType, dbName = null, storeName = null, currentValue = null) {
             if (!key) {
                 alert("No key provided for editing.");
                 return;
             }
 
-            console.log("Editing key:", key, "Storage type:", storageType); // Debug log for editing function
-
-            let newValue = prompt("Enter new value for " + key);
-
-            if (newValue !== null) {
-                if (storageType === 'localStorage') {
+            let newValue;
+            
+            if (storageType === 'localStorage') {
+                const currentValue = localStorage.getItem(key);
+                newValue = prompt(`Edit value for key "${key}"`, currentValue);
+                
+                if (newValue !== null) {
                     localStorage.setItem(key, newValue);
                     alert("LocalStorage data updated!");
-                } else if (storageType === 'indexedDB' && dbName && storeName) {
-                    const openRequest = indexedDB.open(dbName, 1); // Open DB with version 1
-
-                    openRequest.onsuccess = function(event) {
-                        const dbInstance = event.target.result;
-                        const transaction = dbInstance.transaction(storeName, "readwrite");
-                        const objectStore = transaction.objectStore(storeName);
-                        const updateRequest = objectStore.put(newValue, key); // Update data
-
-                        updateRequest.onsuccess = function() {
-                            alert(`IndexedDB data for ${key} updated successfully!`);
+                    displayLocalStorage(); // Refresh the display
+                }
+            } else if (storageType === 'indexedDB' && dbName && storeName) {
+                try {
+                    // Stringify the current value for editing
+                    const currentValueStr = JSON.stringify(currentValue, null, 2);
+                    newValue = prompt(`Edit value for key "${key}" in ${storeName}`, currentValueStr);
+                    
+                    if (newValue !== null) {
+                        // Try to parse the new value as JSON
+                        let parsedValue;
+                        try {
+                            parsedValue = JSON.parse(newValue);
+                        } catch (e) {
+                            // If not valid JSON, use as plain string
+                            parsedValue = newValue;
+                        }
+                        
+                        const openRequest = indexedDB.open(dbName);
+                        
+                        openRequest.onsuccess = function(event) {
+                            const db = event.target.result;
+                            const transaction = db.transaction(storeName, "readwrite");
+                            const store = transaction.objectStore(storeName);
+                            
+                            const updateRequest = store.put(parsedValue, key);
+                            
+                            updateRequest.onsuccess = function() {
+                                alert(`IndexedDB data for ${key} updated successfully!`);
+                                displayIndexedDB(); // Refresh the display
+                            };
+                            
+                            updateRequest.onerror = function() {
+                                alert("Error updating IndexedDB data.");
+                            };
                         };
-
-                        updateRequest.onerror = function() {
-                            alert("Error updating IndexedDB data.");
+                        
+                        openRequest.onerror = function() {
+                            alert("Error opening IndexedDB database.");
                         };
-                    };
-
-                    openRequest.onerror = function() {
-                        alert("Error opening IndexedDB database.");
-                    };
+                    }
+                } catch (error) {
+                    alert("Error editing data: " + error.message);
                 }
             }
         }
+
+        // Function to refresh all data
+        function refreshAll() {
+            displayLocalStorage();
+            displayIndexedDB();
+        }
+
+        // Initial display
+        document.addEventListener('DOMContentLoaded', function() {
+            displayLocalStorage();
+            displayIndexedDB();
+        });
     </script>
 </body>
 </html>
