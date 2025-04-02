@@ -1,1175 +1,475 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SandboxDB</title>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #6200ee;
-            --primary-light: #9e47ff;
-            --primary-dark: #0400ba;
-            --secondary-color: #03dac6;
-            --background: #f5f5f5;
-            --surface: #ffffff;
-            --error: #b00020;
-            --on-primary: #ffffff;
-            --on-secondary: #000000;
-            --on-background: #000000;
-            --on-surface: #000000;
-            --on-error: #ffffff;
-        }
+    <title>Save File & Cookie Manager</title>
+    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+    <script src="main.js" defer></script>
+    <script src="js/edit-data.js" defer></script>
+    <link rel="stylesheet" type="text/css" href="/fonts/fonts.css">
 
-        * {
-            box-sizing: border-box;
+    <style>
+        body {
             margin: 0;
             padding: 0;
+            font-family: Arial, sans-serif;
+            background-image: url("");
+            background-color: #141414;
         }
 
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: var(--background);
-            color: var(--on-background);
-            display: grid;
-            grid-template-areas:
-                "sidebar breadcrumb breadcrumb"
-                "sidebar main preview"
-                "sidebar status preview";
-            grid-template-columns: 300px 1fr 300px;
-            grid-template-rows: 50px 1fr 150px;
+        .selected {
+            background-color: var(--secondary-color) !important;
+            color: var(--primary-color) !important;
+            text-decoration: underline !important;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color) !important;
+            color: var(--primary-color) !important;
+        }
+
+        #fileList,
+        #cookieList {
+            margin: 10px;
+            list-style-type: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            width: calc(100% - 20px);
+        }
+
+        #fileList li,
+        #cookieList li {
+            color: white;
+            text-shadow: 0px 0px 4px black, 0px 0px 4px black;
+            width: calc(33.33% - 20px);
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        #fileList li button,
+        #cookieList li button {
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+        }
+
+        h2 {
+            margin: 10px;
+            color: white;
+            text-shadow: 0px 0px 4px black, 0px 0px 5px black;
+            font-size: 20px;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            font-family: "M Plus Rounded 1c", sans-serif;
+            margin-left: 10px;
+            padding: 5px 10px;
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            font-size: 110%;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #uploadForm {
+            margin-bottom: 20px;
+        }
+
+        .fixed-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
             height: 100vh;
-            overflow: hidden;
+            z-index: -999 !important;
+            visibility: visible !important;
+            background-size: cover;
+            background-repeat: repeat !important;
+            background-position: center;
         }
 
-        /* Sidebar Styles */
-        .sidebar {
-            grid-area: sidebar;
-            background-color: var(--surface);
-            border-right: 1px solid #e0e0e0;
-            overflow-y: auto;
-            padding: 16px;
+        /* Search bar styling */
+        .search-bar {
+            margin: 10px;
+            padding: 5px;
+            font-size: 14px;
+            border: 2px solid #888;
+            border-radius: 5px;
+            width: calc(33.33% - 20px); /* Match the list width */
+            background-color: #222;
+            color: white;
         }
 
-        .sidebar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .sidebar-title {
-            font-size: 1.2rem;
-            font-weight: 500;
-        }
-
-        .refresh-btn {
-            background: none;
+        /* Skip to Cookies button */
+        .skip-button {
+            font-family: "M Plus Rounded 1c", sans-serif;
+            margin-left: 10px;
+            padding: 5px 10px;
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            font-size: 110%;
+            font-weight: bold;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
+        }
+
+        #buttonContainer {
+            position: fixed;
+            bottom: 10px; /* Position the buttons near the bottom of the screen */
+            left: 0px; /* Align container to the left of the screen */
+            display: flex;
+            gap: 10px; /* Space between the buttons */
+            z-index: 10; /* Ensure the buttons are above other elements */
+        }
+
+        #deleteSelected, #downloadSelected {
+            box-shadow: 0px 0px 7px #000;
+            font-size: 18px; /* Bigger text size for readability */
+            font-weight: bold;
+            width: 220px; /* Fixed width to make buttons equal size */
+            height: 60px; /* Increase height for a larger button appearance */
+            background-color: var(--secondary-color);
             color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .refresh-btn:hover {
-            color: var(--primary-light);
-        }
-
-        .database-list {
-            list-style: none;
-        }
-
-        .database-item {
-            padding: 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-
-        .database-item:hover {
-            background-color: rgba(98, 0, 238, 0.08);
-        }
-
-        .database-item.active {
-            background-color: rgba(98, 0, 238, 0.12);
-            font-weight: 500;
-        }
-
-        /* Breadcrumb Styles */
-        .breadcrumb {
-            grid-area: breadcrumb;
-            background-color: var(--surface);
-            border-bottom: 1px solid #e0e0e0;
-            padding: 0 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            overflow-x: auto;
-        }
-
-        .breadcrumb-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-
-        .breadcrumb-item:hover {
-            background-color: rgba(98, 0, 238, 0.08);
-        }
-
-        .breadcrumb-separator {
-            color: #757575;
-        }
-
-        /* Main Content Styles */
-        .main-content {
-            grid-area: main;
-            background-color: var(--surface);
-            overflow-y: auto;
-            padding: 16px;
-        }
-
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .content-title {
-            font-size: 1.1rem;
-            font-weight: 500;
-        }
-
-        .content-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .action-btn {
-            background: none;
             border: none;
+            border-radius: 8px; /* Slightly rounded corners for aesthetics */
             cursor: pointer;
-            color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-
-        .action-btn:hover {
-            background-color: rgba(98, 0, 238, 0.08);
-        }
-
-        .action-btn.delete {
-            color: var(--error);
-        }
-
-        .action-btn.delete:hover {
-            background-color: rgba(176, 0, 32, 0.08);
-        }
-
-        .item-list {
-            list-style: none;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
-        }
-
-        .item-card {
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            padding: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .item-card:hover {
-            border-color: var(--primary-light);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .item-card.active {
-            border-color: var(--primary-color);
-            background-color: rgba(98, 0, 238, 0.04);
-        }
-
-        .item-icon {
-            font-size: 36px;
-            color: var(--primary-color);
-            margin-bottom: 8px;
-        }
-
-        .item-name {
-            font-weight: 500;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .item-meta {
-            font-size: 0.8rem;
-            color: #757575;
-        }
-
-        /* Preview Styles */
-        .preview {
-            grid-area: preview;
-            background-color: var(--surface);
-            border-left: 1px solid #e0e0e0;
-            overflow-y: auto;
-            padding: 16px;
-        }
-
-        .preview-header {
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .preview-title {
-            font-size: 1.1rem;
-            font-weight: 500;
-        }
-
-        .preview-content {
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
-        /* Status Bar Styles */
-        .status-bar {
-            grid-area: status;
-            background-color: var(--surface);
-            border-top: 1px solid #e0e0e0;
-            padding: 8px 16px;
-            font-size: 0.8rem;
-            color: #757575;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        /* Empty State Styles */
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #757575;
             text-align: center;
         }
 
-        .empty-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-
-        /* Highlight.js overrides */
-        .hljs {
-            background: transparent !important;
-            padding: 0 !important;
-        }
-
-        /* Tree view styles */
-        .tree-view {
-            list-style: none;
-            padding-left: 20px;
-        }
-
-        .tree-item {
-            padding: 4px 0;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        .tree-item:hover {
-            background-color: rgba(98, 0, 238, 0.08);
-        }
-
-        .tree-item-icon {
-            margin-right: 8px;
-            color: var(--primary-color);
-        }
-
-        .tree-item-name {
-            flex-grow: 1;
-        }
-
-        .tree-item-meta {
-            font-size: 0.8rem;
-            color: #757575;
-            margin-left: 8px;
+        #deleteSelected:hover, #downloadSelected:hover {
+            background-color: var(--primary-color); /* Add hover effect */
+            color: var(--secondary-color); /* Swap colors on hover */
         }
     </style>
 </head>
+
 <body>
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-title">IndexedDB Explorer</div>
-            <button class="refresh-btn" id="refresh-btn">
-                <span class="material-icons">refresh</span>
-                Refresh
-            </button>
-        </div>
-        <ul class="database-list" id="database-list">
-            <!-- Databases will be populated here -->
-        </ul>
+    <div id="navbar-container"></div>
+
+    <br>
+    <!-- Skip to Cookies Button -->
+    <a href="#cookieSection" class="skip-button">Skip to Cookies</a>
+    <br><br>
+
+    <form id="uploadForm" style="color: white; padding: 0.5vw;">
+        <input type="file" id="fileInput" style="text-shadow: 0px 0px 4px black, 0px 0px 4px black;" />
+        <button type="submit">Upload</button>
+    </form>
+    <button id="selectAll">Select All</button>
+
+    <h2>Local Storage</h2>
+    <!-- Search bar for Local Storage -->
+    <input type="text" id="localSearch" class="search-bar" placeholder="Search Local Storage...">
+    <ul id="fileList"></ul>
+
+    <h2 id="cookieSection">Cookies</h2>
+    <!-- Search bar for Cookies -->
+    <input type="text" id="cookieSearch" class="search-bar" placeholder="Search Cookies...">
+    <ul id="cookieList"></ul>
+
+    <!-- Container for the buttons -->
+    <div id="buttonContainer">
+        <button id="deleteSelected">Delete Selected</button>
+        <button id="downloadSelected">Download Selected</button>
     </div>
 
-    <!-- Breadcrumb Navigation -->
-    <div class="breadcrumb" id="breadcrumb">
-        <div class="breadcrumb-item" data-type="root">
-            <span class="material-icons">home</span>
-            Home
-        </div>
-    </div>
+    <br><br>
 
-    <!-- Main Content -->
-    <div class="main-content" id="main-content">
-        <div class="empty-state">
-            <span class="material-icons empty-icon">folder_open</span>
-            <div>Select a database or object store to view contents</div>
-        </div>
-    </div>
+    <center style="margin-bottom: 5vh; margin-top: 4vh; display: none;">
+        <embed src="https://coolubg.github.io/coolubg-list/blank.swf"></embed>
+    </center>
 
-    <!-- Preview Pane -->
-    <div class="preview" id="preview">
-        <div class="preview-header">
-            <div class="preview-title">Preview</div>
-        </div>
-        <div class="preview-content" id="preview-content">
-            Select an item to preview its contents
-        </div>
-    </div>
-
-    <!-- Status Bar -->
-    <div class="status-bar" id="status-bar">
-        <div>Ready</div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // State management
-            const state = {
-                currentDb: null,
-                currentStore: null,
-                currentItem: null,
-                databases: [],
-                pathStructure: {} // To store the hierarchical structure of paths
-            };
-
-            // DOM elements
-            const databaseList = document.getElementById('database-list');
-            const breadcrumb = document.getElementById('breadcrumb');
-            const mainContent = document.getElementById('main-content');
-            const previewContent = document.getElementById('preview-content');
-            const refreshBtn = document.getElementById('refresh-btn');
-            const statusBar = document.getElementById('status-bar');
-
-            // Initialize the explorer
-            refreshDatabases();
-
-            // Event listeners
-            refreshBtn.addEventListener('click', refreshDatabases);
-
-            // Functions
-            function refreshDatabases() {
-                updateStatus('Loading databases...');
-                databaseList.innerHTML = '<li class="database-item"><span class="material-icons">hourglass_empty</span>Loading...</li>';
-                
-                indexedDB.databases().then(databases => {
-                    state.databases = databases;
-                    renderDatabaseList(databases);
-                    updateStatus(`${databases.length} databases found`);
-                }).catch(error => {
-                    databaseList.innerHTML = '<li class="database-item"><span class="material-icons">error</span>Error loading databases</li>';
-                    updateStatus('Error loading databases: ' + error.message, true);
-                    console.error('Error loading databases:', error);
+        // Delete selected files
+        document.getElementById("deleteSelected").addEventListener("click", function () {
+            // Get selected files and cookies
+            const fileCheckboxes = document.querySelectorAll('#fileList input[type="checkbox"]:checked');
+            const cookieCheckboxes = document.querySelectorAll('#cookieList input[type="checkbox"]:checked');
+            
+            // Count the selected items
+            const selectedFileCount = fileCheckboxes.length;
+            const selectedCookieCount = cookieCheckboxes.length;
+            const totalSelected = selectedFileCount + selectedCookieCount;
+    
+            // If no files or cookies are selected, show an alert
+            if (totalSelected === 0) {
+                alert("No items selected for deletion.");
+                return;
+            }
+    
+            // Confirm deletion with user
+            const confirmationMessage = `Are you sure you want to delete ${totalSelected} item(s)?`;
+            if (confirm(confirmationMessage)) {
+                // Delete selected files from localStorage and DOM
+                fileCheckboxes.forEach(checkbox => {
+                    const key = checkbox.nextSibling.textContent;
+                    selectedFiles.delete(key); // Remove key from selectedFiles set
+    
+                    // Remove the corresponding entry from localStorage
+                    localStorage.removeItem(key);
+    
+                    // Remove the file item from the DOM
+                    checkbox.parentElement.remove();
+                });
+    
+                // Delete selected cookies from localStorage and DOM
+                cookieCheckboxes.forEach(checkbox => {
+                    const name = checkbox.nextSibling.textContent;
+                    selectedFiles.delete(name); // Remove cookie name from selectedFiles set
+    
+                    // Remove the corresponding cookie from localStorage (if needed)
+                    localStorage.removeItem(name);
+    
+                    // Remove the cookie item from the DOM
+                    checkbox.parentElement.remove();
                 });
             }
-
-            function renderDatabaseList(databases) {
-                databaseList.innerHTML = '';
+        });
+    
+        document.getElementById("downloadSelected").addEventListener("click", function () {
+            // Get selected files and cookies
+            const fileCheckboxes = document.querySelectorAll('#fileList input[type="checkbox"]:checked');
+            const cookieCheckboxes = document.querySelectorAll('#cookieList input[type="checkbox"]:checked');
+            
+            // Count the selected items
+            const selectedFileCount = fileCheckboxes.length;
+            const selectedCookieCount = cookieCheckboxes.length;
+            const totalSelected = selectedFileCount + selectedCookieCount;
+    
+            // If no files or cookies are selected, show an alert
+            if (totalSelected === 0) {
+                alert("No items selected for download.");
+                return;
+            }
+    
+            // Handle downloading selected files from localStorage
+            fileCheckboxes.forEach(checkbox => {
+                const key = checkbox.nextSibling.textContent;
+                const fileContent = localStorage.getItem(key); // Get the actual file content from localStorage
                 
-                if (databases.length === 0) {
-                    databaseList.innerHTML = '<li class="database-item"><span class="material-icons">info</span>No databases found</li>';
-                    return;
+                if (fileContent) {
+                    // Create a Blob object containing the content
+                    const blob = new Blob([fileContent], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+    
+                    // Create a temporary anchor link and trigger a download
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = key;  // Set the file name
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);  // Clean up the DOM
+                    
+                    // Revoke the object URL after the download is triggered
+                    URL.revokeObjectURL(url);
+                } else {
+                    console.warn(`No content found for key: ${key}`);
                 }
-
-                databases.forEach(db => {
-                    const dbItem = document.createElement('li');
-                    dbItem.className = 'database-item';
-                    dbItem.dataset.dbName = db.name;
-                    dbItem.dataset.dbVersion = db.version;
-                    dbItem.innerHTML = `
-                        <span class="material-icons">storage</span>
-                        <div>
-                            <div>${db.name}</div>
-                            <div class="item-meta">Version: ${db.version}</div>
-                        </div>
-                    `;
+            });
+    
+            // Handle downloading selected cookies
+            cookieCheckboxes.forEach(checkbox => {
+                const name = checkbox.nextSibling.textContent;
+                const cookieContent = getCookie(name); // Replace with actual cookie retrieval
+    
+                if (cookieContent) {
+                    // Create a Blob object containing the cookie content
+                    const blob = new Blob([cookieContent], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+    
+                    // Create a temporary anchor link and trigger a download
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = name;  // Set the cookie name as the file name
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);  // Clean up the DOM
                     
-                    dbItem.addEventListener('click', () => openDatabase(db.name, db.version));
-                    databaseList.appendChild(dbItem);
+                    // Revoke the object URL after the download is triggered
+                    URL.revokeObjectURL(url);
+                } else {
+                    console.warn(`No content found for cookie: ${name}`);
+                }
+            });
+        });
+    
+        // Function to retrieve cookie content by name
+        function getCookie(name) {
+            const cookie = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+            return cookie ? cookie.split('=')[1] : null;
+        }
+    
+        document.getElementById("selectAll").addEventListener("click", function () {
+            const fileCheckboxes = document.querySelectorAll('#fileList input[type="checkbox"]');
+            const cookieCheckboxes = document.querySelectorAll('#cookieList input[type="checkbox"]');
+            
+            // Check if all items are already selected
+            const allSelected = [...fileCheckboxes, ...cookieCheckboxes].every(checkbox => checkbox.checked);
+            
+            if (allSelected) {
+                // Deselect all
+                fileCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                    const key = checkbox.nextSibling.textContent;
+                    selectedFiles.delete(key); // Remove key from selectedFiles set
                 });
+                
+                cookieCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                    const name = checkbox.nextSibling.textContent;
+                    selectedFiles.delete(name); // Remove cookie name from selectedFiles set
+                });
+                
+                // Change the button text to "Select All"
+                this.textContent = "Select All";
+            } else {
+                // Select all
+                fileCheckboxes.forEach(checkbox => {
+                    checkbox.checked = true;
+                    const key = checkbox.nextSibling.textContent;
+                    selectedFiles.add(key); // Add key to selectedFiles set
+                });
+                
+                cookieCheckboxes.forEach(checkbox => {
+                    checkbox.checked = true;
+                    const name = checkbox.nextSibling.textContent;
+                    selectedFiles.add(name); // Add cookie name to selectedFiles set
+                });
+                
+                // Change the button text to "Deselect All"
+                this.textContent = "Deselect All";
             }
-
-            function openDatabase(dbName, version) {
-                updateStatus(`Opening database: ${dbName}`);
-                state.currentDb = dbName;
-                state.currentStore = null;
-                state.currentItem = null;
-                state.pathStructure = {};
-                
-                // Update active state in sidebar
-                document.querySelectorAll('.database-item').forEach(item => {
-                    item.classList.toggle('active', item.dataset.dbName === dbName);
-                });
-                
-                // Update breadcrumb
-                updateBreadcrumb([
-                    { type: 'root', name: 'Home', icon: 'home' },
-                    { type: 'db', name: dbName, icon: 'storage' }
-                ]);
-                
-                // Open the database to get object stores
-                const request = indexedDB.open(dbName, version);
-                
-                request.onsuccess = (event) => {
-                    const db = event.target.result;
-                    const storeNames = Array.from(db.objectStoreNames);
-                    db.close();
-                    
-                    // Build path structure for this database
-                    buildPathStructure(dbName, storeNames);
-                    
-                    // Render either the tree view or flat view depending on path structure
-                    if (hasNestedPaths()) {
-                        renderTreeView();
-                    } else {
-                        renderObjectStores(storeNames);
-                    }
-                    
-                    updateStatus(`Database opened: ${dbName} (${storeNames.length} object stores)`);
+        });
+    
+        const fileInput = document.getElementById("fileInput");
+        const fileList = document.getElementById("fileList");
+        const cookieList = document.getElementById("cookieList");
+        const localSearch = document.getElementById("localSearch");
+        const cookieSearch = document.getElementById("cookieSearch");
+        const selectedFiles = new Set();
+    
+        function createFileListItem(key, value) {
+            const listItem = document.createElement("li");
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.addEventListener("change", () => {
+                if (checkbox.checked) {
+                    selectedFiles.add(key);
+                } else {
+                    selectedFiles.delete(key);
+                }
+            });
+            listItem.appendChild(checkbox);
+            listItem.appendChild(document.createTextNode(`${key}`));
+    
+            // Create an "Edit File" button
+            const editButton = document.createElement("button");
+            editButton.textContent = "Edit File";
+            editButton.addEventListener("click", () => {
+                const currentValue = localStorage.getItem(key); // Always fetch the most recent value
+                openEditor(key, currentValue);
+            });
+            listItem.appendChild(editButton);
+    
+            return listItem;
+        }
+    
+        function createCookieListItem(name) {
+            const listItem = document.createElement("li");
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.addEventListener("change", () => {
+                if (checkbox.checked) {
+                    selectedFiles.add(name);
+                } else {
+                    selectedFiles.delete(name);
+                }
+            });
+            listItem.appendChild(checkbox);
+            listItem.appendChild(document.createTextNode(`${name}`));
+    
+            // Create an "Edit File" button
+            const editButton = document.createElement("button");
+            editButton.textContent = "Edit File";
+            editButton.addEventListener("click", () => {
+                const currentValue = getCookie(name); // Always fetch the most recent cookie value
+                openEditor(name, currentValue);
+            });
+            listItem.appendChild(editButton);
+    
+            return listItem;
+        }
+    
+        function displayLocalStorage() {
+            fileList.innerHTML = "";
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                fileList.appendChild(createFileListItem(key, value));
+            }
+        }
+    
+        function displayCookies() {
+            cookieList.innerHTML = "";
+            const cookies = document.cookie.split('; ');
+            cookies.forEach(cookie => {
+                const name = cookie.split('=')[0];
+                cookieList.appendChild(createCookieListItem(name));
+            });
+        }
+    
+        displayLocalStorage();
+        displayCookies();
+    
+        localSearch.addEventListener("input", () => {
+            const searchTerm = localSearch.value.toLowerCase();
+            [...fileList.children].forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? "" : "none";
+            });
+        });
+    
+        cookieSearch.addEventListener("input", () => {
+            const searchTerm = cookieSearch.value.toLowerCase();
+            [...cookieList.children].forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? "" : "none";
+            });
+        });
+    
+        // Handle file upload
+        fileInput.addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    localStorage.setItem(file.name, e.target.result);
+                    displayLocalStorage();
                 };
-                
-                request.onerror = (event) => {
-                    updateStatus(`Error opening database: ${event.target.error}`, true);
-                    console.error('Error opening database:', event.target.error);
-                };
-            }
-
-            function buildPathStructure(dbName, storeNames) {
-                state.pathStructure = {};
-                
-                storeNames.forEach(storeName => {
-                    // Split the store name by slashes to handle path-like structures
-                    const parts = storeName.split('/');
-                    let currentLevel = state.pathStructure;
-                    
-                    for (let i = 0; i < parts.length; i++) {
-                        const part = parts[i];
-                        const isFile = i === parts.length - 1 && parts.length > 1;
-                        
-                        if (!currentLevel[part]) {
-                            currentLevel[part] = {
-                                name: part,
-                                type: isFile ? 'file' : 'folder',
-                                children: {},
-                                fullPath: parts.slice(0, i + 1).join('/'),
-                                isFile: isFile
-                            };
-                        }
-                        
-                        if (!isFile) {
-                            currentLevel = currentLevel[part].children;
-                        }
-                    }
-                });
-            }
-
-            function hasNestedPaths() {
-                return Object.values(state.pathStructure).some(item => 
-                    Object.keys(item.children).length > 0 || item.isFile
-                );
-            }
-
-            function renderTreeView() {
-                mainContent.innerHTML = '';
-                
-                const header = document.createElement('div');
-                header.className = 'content-header';
-                header.innerHTML = `
-                    <div class="content-title">${state.currentDb}</div>
-                `;
-                mainContent.appendChild(header);
-                
-                const treeContainer = document.createElement('ul');
-                treeContainer.className = 'tree-view';
-                
-                // Recursively render tree items
-                renderTreeItems(treeContainer, state.pathStructure);
-                
-                mainContent.appendChild(treeContainer);
-            }
-
-            function renderTreeItems(container, items) {
-                Object.values(items).forEach(item => {
-                    const li = document.createElement('li');
-                    li.className = 'tree-item';
-                    li.dataset.path = item.fullPath;
-                    li.dataset.isFile = item.isFile;
-                    
-                    const icon = document.createElement('span');
-                    icon.className = 'tree-item-icon material-icons';
-                    icon.textContent = item.isFile ? 'insert_drive_file' : 'folder';
-                    
-                    const name = document.createElement('span');
-                    name.className = 'tree-item-name';
-                    name.textContent = item.name;
-                    
-                    li.appendChild(icon);
-                    li.appendChild(name);
-                    
-                    if (item.isFile) {
-                        const meta = document.createElement('span');
-                        meta.className = 'tree-item-meta';
-                        meta.textContent = 'File';
-                        li.appendChild(meta);
-                    }
-                    
-                    li.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (item.isFile) {
-                            openPathAsFile(item.fullPath);
-                        } else {
-                            openPathAsFolder(item.fullPath);
-                        }
-                    });
-                    
-                    container.appendChild(li);
-                    
-                    if (Object.keys(item.children).length > 0) {
-                        const childContainer = document.createElement('ul');
-                        childContainer.className = 'tree-view';
-                        renderTreeItems(childContainer, item.children);
-                        container.appendChild(childContainer);
-                    }
-                });
-            }
-
-            function openPathAsFolder(path) {
-                state.currentStore = path;
-                state.currentItem = null;
-                
-                // Update breadcrumb
-                const pathParts = path.split('/');
-                const breadcrumbItems = [
-                    { type: 'root', name: 'Home', icon: 'home' },
-                    { type: 'db', name: state.currentDb, icon: 'storage' }
-                ];
-                
-                // Add each part of the path to breadcrumb
-                let currentPath = '';
-                pathParts.forEach((part, index) => {
-                    currentPath = currentPath ? `${currentPath}/${part}` : part;
-                    breadcrumbItems.push({
-                        type: index === pathParts.length - 1 ? 'store' : 'folder',
-                        name: part,
-                        icon: index === pathParts.length - 1 ? 'folder' : 'folder',
-                        path: currentPath
-                    });
-                });
-                
-                updateBreadcrumb(breadcrumbItems);
-                
-                // Get all items that start with this path
-                const request = indexedDB.open(state.currentDb);
-                
-                request.onsuccess = (event) => {
-                    const db = event.target.result;
-                    const items = [];
-                    
-                    // Get all stores that start with this path
-                    const storeNames = Array.from(db.objectStoreNames).filter(name => 
-                        name.startsWith(path + '/') || name === path
-                    );
-                    
-                    // For each store, get its items
-                    const promises = storeNames.map(storeName => {
-                        return new Promise((resolve) => {
-                            const transaction = db.transaction(storeName, 'readonly');
-                            const store = transaction.objectStore(storeName);
-                            const cursorRequest = store.openCursor();
-                            const storeItems = [];
-                            
-                            cursorRequest.onsuccess = (event) => {
-                                const cursor = event.target.result;
-                                if (cursor) {
-                                    storeItems.push({
-                                        key: cursor.key,
-                                        value: cursor.value,
-                                        storeName: storeName
-                                    });
-                                    cursor.continue();
-                                } else {
-                                    resolve(storeItems);
-                                }
-                            };
-                            
-                            cursorRequest.onerror = () => resolve([]);
-                        });
-                    });
-                    
-                    Promise.all(promises).then(results => {
-                        db.close();
-                        const allItems = results.flat();
-                        
-                        // Group by the next level of the path
-                        const pathLevels = {};
-                        const fileItems = [];
-                        
-                        allItems.forEach(item => {
-                            const remainingPath = item.storeName.substring(path.length + 1);
-                            const nextSlash = remainingPath.indexOf('/');
-                            
-                            if (nextSlash === -1) {
-                                // It's a file in this directory
-                                fileItems.push(item);
-                            } else {
-                                // It's a subdirectory
-                                const folderName = remainingPath.substring(0, nextSlash);
-                                if (!pathLevels[folderName]) {
-                                    pathLevels[folderName] = {
-                                        type: 'folder',
-                                        name: folderName,
-                                        path: path ? `${path}/${folderName}` : folderName
-                                    };
-                                }
-                            }
-                        });
-                        
-                        // Render the contents
-                        renderPathContents(Object.values(pathLevels), fileItems);
-                        updateStatus(`Showing contents of ${path}`);
-                    });
-                };
-            }
-
-            function openPathAsFile(path) {
-                state.currentStore = path;
-                
-                // Open the store and get its items
-                const request = indexedDB.open(state.currentDb);
-                
-                request.onsuccess = (event) => {
-                    const db = event.target.result;
-                    const transaction = db.transaction(path, 'readonly');
-                    const store = transaction.objectStore(path);
-                    const items = [];
-                    
-                    const cursorRequest = store.openCursor();
-                    
-                    cursorRequest.onsuccess = (event) => {
-                        const cursor = event.target.result;
-                        if (cursor) {
-                            items.push({
-                                key: cursor.key,
-                                value: cursor.value,
-                                storeName: path
-                            });
-                            cursor.continue();
-                        } else {
-                            db.close();
-                            if (items.length > 0) {
-                                // For files, we'll just preview the first item
-                                previewItem(items[0]);
-                                
-                                // Update breadcrumb
-                                const pathParts = path.split('/');
-                                const breadcrumbItems = [
-                                    { type: 'root', name: 'Home', icon: 'home' },
-                                    { type: 'db', name: state.currentDb, icon: 'storage' }
-                                ];
-                                
-                                // Add each part of the path to breadcrumb
-                                let currentPath = '';
-                                pathParts.forEach((part, index) => {
-                                    currentPath = currentPath ? `${currentPath}/${part}` : part;
-                                    breadcrumbItems.push({
-                                        type: index === pathParts.length - 1 ? 'file' : 'folder',
-                                        name: part,
-                                        icon: index === pathParts.length - 1 ? 'insert_drive_file' : 'folder',
-                                        path: currentPath
-                                    });
-                                });
-                                
-                                updateBreadcrumb(breadcrumbItems);
-                                updateStatus(`Showing file: ${path}`);
-                            }
-                        }
-                    };
-                };
-            }
-
-            function renderPathContents(folders, files) {
-                mainContent.innerHTML = '';
-                
-                const header = document.createElement('div');
-                header.className = 'content-header';
-                header.innerHTML = `
-                    <div class="content-title">${state.currentStore || state.currentDb}</div>
-                `;
-                mainContent.appendChild(header);
-                
-                if (folders.length === 0 && files.length === 0) {
-                    mainContent.innerHTML += `
-                        <div class="empty-state">
-                            <span class="material-icons empty-icon">info</span>
-                            <div>No items found in this location</div>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                const list = document.createElement('ul');
-                list.className = 'item-list';
-                
-                // Add folders first
-                folders.forEach(folder => {
-                    const item = document.createElement('li');
-                    item.className = 'item-card';
-                    item.dataset.path = folder.path;
-                    item.innerHTML = `
-                        <div class="item-icon material-icons">folder</div>
-                        <div class="item-name">${folder.name}</div>
-                        <div class="item-meta">Folder</div>
-                    `;
-                    
-                    item.addEventListener('click', () => openPathAsFolder(folder.path));
-                    list.appendChild(item);
-                });
-                
-                // Add files
-                files.forEach(file => {
-                    const displayName = extractFilename(file.key);
-                    const fileType = getFileTypeInfo(file);
-                    
-                    const item = document.createElement('li');
-                    item.className = 'item-card';
-                    item.dataset.key = JSON.stringify(file.key);
-                    item.dataset.storeName = file.storeName;
-                    item.innerHTML = `
-                        <div class="item-icon material-icons">insert_drive_file</div>
-                        <div class="item-name">${displayName}</div>
-                        <div class="item-meta">${fileType}</div>
-                    `;
-                    
-                    item.addEventListener('click', () => previewItem(file));
-                    list.appendChild(item);
-                });
-                
-                mainContent.appendChild(list);
-            }
-
-            function renderObjectStores(storeNames) {
-                mainContent.innerHTML = '';
-                
-                if (storeNames.length === 0) {
-                    mainContent.innerHTML = `
-                        <div class="empty-state">
-                            <span class="material-icons empty-icon">info</span>
-                            <div>No object stores found in this database</div>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                const header = document.createElement('div');
-                header.className = 'content-header';
-                header.innerHTML = `
-                    <div class="content-title">Object Stores</div>
-                `;
-                mainContent.appendChild(header);
-                
-                const list = document.createElement('ul');
-                list.className = 'item-list';
-                
-                storeNames.forEach(storeName => {
-                    const item = document.createElement('li');
-                    item.className = 'item-card';
-                    item.dataset.storeName = storeName;
-                    item.innerHTML = `
-                        <div class="item-icon material-icons">folder</div>
-                        <div class="item-name">${storeName}</div>
-                        <div class="item-meta">Object Store</div>
-                    `;
-                    
-                    item.addEventListener('click', () => openObjectStore(storeName));
-                    list.appendChild(item);
-                });
-                
-                mainContent.appendChild(list);
-            }
-
-            function openObjectStore(storeName) {
-                updateStatus(`Loading items from: ${storeName}`);
-                state.currentStore = storeName;
-                state.currentItem = null;
-                
-                // Update breadcrumb
-                updateBreadcrumb([
-                    { type: 'root', name: 'Home', icon: 'home' },
-                    { type: 'db', name: state.currentDb, icon: 'storage' },
-                    { type: 'store', name: storeName, icon: 'folder' }
-                ]);
-                
-                // Open the database and object store
-                const request = indexedDB.open(state.currentDb);
-                
-                request.onsuccess = (event) => {
-                    const db = event.target.result;
-                    const transaction = db.transaction(storeName, 'readonly');
-                    const store = transaction.objectStore(storeName);
-                    const items = [];
-                    
-                    // Get all items in the store
-                    const cursorRequest = store.openCursor();
-                    
-                    cursorRequest.onsuccess = (event) => {
-                        const cursor = event.target.result;
-                        if (cursor) {
-                            items.push({
-                                key: cursor.key,
-                                value: cursor.value,
-                                storeName: storeName
-                            });
-                            cursor.continue();
-                        } else {
-                            db.close();
-                            renderStoreItems(items);
-                            updateStatus(`Loaded ${items.length} items from ${storeName}`);
-                        }
-                    };
-                    
-                    cursorRequest.onerror = (event) => {
-                        db.close();
-                        updateStatus(`Error reading items: ${event.target.error}`, true);
-                        console.error('Error reading items:', event.target.error);
-                    };
-                };
-                
-                request.onerror = (event) => {
-                    updateStatus(`Error opening database: ${event.target.error}`, true);
-                    console.error('Error opening database:', event.target.error);
-                };
-            }
-
-            function renderStoreItems(items) {
-                mainContent.innerHTML = '';
-                
-                if (items.length === 0) {
-                    mainContent.innerHTML = `
-                        <div class="empty-state">
-                            <span class="material-icons empty-icon">info</span>
-                            <div>No items found in this object store</div>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                const header = document.createElement('div');
-                header.className = 'content-header';
-                header.innerHTML = `
-                    <div class="content-title">Items in ${state.currentStore}</div>
-                    <div class="content-actions">
-                        <button class="action-btn delete" id="delete-store-btn">
-                            <span class="material-icons">delete</span>
-                            Delete Store
-                        </button>
-                    </div>
-                `;
-                mainContent.appendChild(header);
-                
-                // Add event listener for delete store button
-                document.getElementById('delete-store-btn').addEventListener('click', deleteCurrentStore);
-                
-                const list = document.createElement('ul');
-                list.className = 'item-list';
-                
-                items.forEach(item => {
-                    const displayName = extractFilename(item.key);
-                    const fileType = getFileTypeInfo(item);
-                    
-                    const itemCard = document.createElement('li');
-                    itemCard.className = 'item-card';
-                    itemCard.dataset.itemKey = JSON.stringify(item.key);
-                    itemCard.dataset.storeName = item.storeName;
-                    itemCard.innerHTML = `
-                        <div class="item-icon material-icons">insert_drive_file</div>
-                        <div class="item-name">${displayName}</div>
-                        <div class="item-meta">${fileType}</div>
-                    `;
-                    
-                    itemCard.addEventListener('click', () => previewItem(item));
-                    list.appendChild(itemCard);
-                });
-                
-                mainContent.appendChild(list);
-            }
-
-            function extractFilename(key) {
-                if (typeof key === 'string' && key.includes('/')) {
-                    const parts = key.split('/');
-                    return parts[parts.length - 1]; // Return the last segment as filename
-                }
-                return formatKey(key);
-            }
-
-            function getFileTypeInfo(item) {
-                if (typeof item.key === 'string' && item.key.includes('/')) {
-                    const filename = extractFilename(item.key);
-                    const extension = filename.includes('.') 
-                        ? filename.split('.').pop().toUpperCase() 
-                        : 'FILE';
-                    return `${extension} file | ${typeof item.value}`;
-                }
-                return `Key: ${typeof item.key} | Value: ${typeof item.value}`;
-            }
-
-            function previewItem(item) {
-                state.currentItem = item;
-                
-                // Highlight the selected item
-                document.querySelectorAll('.item-card').forEach(card => {
-                    card.classList.toggle('active', 
-                        card.dataset.itemKey === JSON.stringify(item.key) && 
-                        card.dataset.storeName === item.storeName
-                    );
-                });
-                
-                // Display the item in the preview pane
-                let previewText;
-                try {
-                    if (typeof item.value === 'object' && item.value !== null) {
-                        previewText = JSON.stringify(item.value, null, 2);
-                    } else {
-                        previewText = String(item.value);
-                    }
-                } catch (e) {
-                    previewText = `[Unable to display value: ${e.message}]`;
-                }
-                
-                previewContent.innerHTML = `<pre><code>${escapeHtml(previewText)}</code></pre>`;
-                hljs.highlightElement(previewContent.querySelector('code'));
-                
-                // Update breadcrumb if we're not already showing the item level
-                if (!breadcrumb.lastChild.dataset.path || 
-                    breadcrumb.lastChild.dataset.path !== item.storeName) {
-                    const pathParts = item.storeName.split('/');
-                    const breadcrumbItems = [
-                        { type: 'root', name: 'Home', icon: 'home' },
-                        { type: 'db', name: state.currentDb, icon: 'storage' }
-                    ];
-                    
-                    // Add each part of the path to breadcrumb
-                    let currentPath = '';
-                    pathParts.forEach((part, index) => {
-                        currentPath = currentPath ? `${currentPath}/${part}` : part;
-                        breadcrumbItems.push({
-                            type: index === pathParts.length - 1 ? 'store' : 'folder',
-                            name: part,
-                            icon: index === pathParts.length - 1 ? 'folder' : 'folder',
-                            path: currentPath
-                        });
-                    });
-                    
-                    // Add the item itself
-                    breadcrumbItems.push({
-                        type: 'item',
-                        name: extractFilename(item.key),
-                        icon: 'insert_drive_file'
-                    });
-                    
-                    updateBreadcrumb(breadcrumbItems);
-                }
-            }
-
-            function deleteCurrentStore() {
-                if (!state.currentDb || !state.currentStore) return;
-                
-                if (!confirm(`Are you sure you want to delete the object store "${state.currentStore}"? This cannot be undone.`)) {
-                    return;
-                }
-                
-                updateStatus(`Deleting object store: ${state.currentStore}`);
-                
-                // We need to open the database with a higher version to delete the store
-                const request = indexedDB.open(state.currentDb);
-                
-                request.onsuccess = (event) => {
-                    const db = event.target.result;
-                    const version = db.version + 1;
-                    db.close();
-                    
-                    // Reopen with higher version
-                    const upgradeRequest = indexedDB.open(state.currentDb, version);
-                    
-                    upgradeRequest.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-                        db.deleteObjectStore(state.currentStore);
-                        updateStatus(`Object store "${state.currentStore}" deleted`);
-                    };
-                    
-                    upgradeRequest.onsuccess = (event) => {
-                        event.target.result.close();
-                        refreshDatabases();
-                        mainContent.innerHTML = `
-                            <div class="empty-state">
-                                <span class="material-icons empty-icon">check_circle</span>
-                                <div>Object store "${state.currentStore}" deleted successfully</div>
-                            </div>
-                        `;
-                    };
-                    
-                    upgradeRequest.onerror = (event) => {
-                        updateStatus(`Error deleting object store: ${event.target.error}`, true);
-                        console.error('Error deleting object store:', event.target.error);
-                    };
-                };
-                
-                request.onerror = (event) => {
-                    updateStatus(`Error opening database: ${event.target.error}`, true);
-                    console.error('Error opening database:', event.target.error);
-                };
-            }
-
-            function updateBreadcrumb(items) {
-                breadcrumb.innerHTML = '';
-                
-                items.forEach((item, index) => {
-                    const isLast = index === items.length - 1;
-                    
-                    const crumb = document.createElement('div');
-                    crumb.className = 'breadcrumb-item';
-                    crumb.dataset.type = item.type;
-                    
-                    if (item.type === 'db') crumb.dataset.dbName = item.name;
-                    if (item.type === 'store' || item.type === 'folder' || item.type === 'file') {
-                        crumb.dataset.path = item.path;
-                    }
-                    
-                    crumb.innerHTML = `
-                        <span class="material-icons">${item.icon}</span>
-                        ${item.name}
-                    `;
-                    
-                    crumb.addEventListener('click', () => navigateFromBreadcrumb(item, index));
-                    breadcrumb.appendChild(crumb);
-                    
-                    if (!isLast) {
-                        const separator = document.createElement('div');
-                        separator.className = 'breadcrumb-separator';
-                        separator.innerHTML = '<span class="material-icons">chevron_right</span>';
-                        breadcrumb.appendChild(separator);
-                    }
-                });
-            }
-
-            function navigateFromBreadcrumb(item, index) {
-                switch (item.type) {
-                    case 'root':
-                        // Reset to initial state
-                        state.currentDb = null;
-                        state.currentStore = null;
-                        state.currentItem = null;
-                        
-                        // Clear active states
-                        document.querySelectorAll('.database-item').forEach(item => item.classList.remove('active'));
-                        document.querySelectorAll('.item-card').forEach(item => item.classList.remove('active'));
-                        
-                        // Show empty main content
-                        mainContent.innerHTML = `
-                            <div class="empty-state">
-                                <span class="material-icons empty-icon">folder_open</span>
-                                <div>Select a database or object store to view contents</div>
-                            </div>
-                        `;
-                        
-                        // Reset preview
-                        previewContent.textContent = 'Select an item to preview its contents';
-                        break;
-                        
-                    case 'db':
-                        // Go back to database view
-                        openDatabase(state.currentDb, state.databases.find(db => db.name === state.currentDb).version);
-                        break;
-                        
-                    case 'folder':
-                    case 'store':
-                        // Go back to this folder/store
-                        openPathAsFolder(item.path);
-                        break;
-                        
-                    case 'file':
-                        // Go back to this file
-                        openPathAsFile(item.path);
-                        break;
-                        
-                    case 'item':
-                        // Item is already selected, no action needed
-                        break;
-                }
-            }
-
-            function updateStatus(message, isError = false) {
-                statusBar.innerHTML = isError 
-                    ? `<span style="color: var(--error)">${message}</span>`
-                    : message;
-            }
-
-            function formatKey(key) {
-                if (typeof key === 'object' && key !== null) {
-                    try {
-                        return JSON.stringify(key);
-                    } catch (e) {
-                        return '[Complex Key]';
-                    }
-                }
-                return String(key);
-            }
-
-            function escapeHtml(unsafe) {
-                return unsafe
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
+                reader.readAsText(file);
             }
         });
     </script>
+    
 </body>
+
 </html>
