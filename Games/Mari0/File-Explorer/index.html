@@ -1,518 +1,788 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>IndexedDB File Explorer</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexedDB Explorer</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #4285f4;
-            --hover-color: #e8f0fe;
-            --border-color: #dadce0;
-            --text-color: #202124;
-            --secondary-text: #5f6368;
+            --primary-color: #6200ee;
+            --primary-light: #9e47ff;
+            --primary-dark: #0400ba;
+            --secondary-color: #03dac6;
+            --background: #f5f5f5;
+            --surface: #ffffff;
+            --error: #b00020;
+            --on-primary: #ffffff;
+            --on-secondary: #000000;
+            --on-background: #000000;
+            --on-surface: #000000;
+            --on-error: #ffffff;
         }
-        
-        body {
-            font-family: 'Roboto', Arial, sans-serif;
+
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            color: var(--text-color);
         }
-        
-        .container {
-            display: flex;
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background);
+            color: var(--on-background);
+            display: grid;
+            grid-template-areas:
+                "sidebar breadcrumb breadcrumb"
+                "sidebar main preview"
+                "sidebar status preview";
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 50px 1fr 150px;
             height: 100vh;
+            overflow: hidden;
         }
-        
+
+        /* Sidebar Styles */
         .sidebar {
-            width: 250px;
-            background: #f8f9fa;
-            border-right: 1px solid var(--border-color);
+            grid-area: sidebar;
+            background-color: var(--surface);
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
             padding: 16px;
-            overflow-y: auto;
         }
-        
-        .main-content {
-            flex: 1;
+
+        .sidebar-header {
             display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        
-        .toolbar {
-            padding: 8px 16px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 8px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
         }
-        
-        .breadcrumbs {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            padding: 0 8px;
-            font-size: 14px;
-        }
-        
-        .breadcrumb-sep {
-            margin: 0 4px;
-            color: var(--secondary-text);
-        }
-        
-        .file-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px;
-        }
-        
-        .file-item {
-            display: flex;
-            align-items: center;
-            padding: 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            user-select: none;
-        }
-        
-        .file-item:hover {
-            background-color: var(--hover-color);
-        }
-        
-        .file-item.selected {
-            background-color: #e2eeff;
-        }
-        
-        .file-icon {
-            width: 24px;
-            height: 24px;
-            margin-right: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--secondary-text);
-        }
-        
-        .file-name {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .file-meta {
-            font-size: 12px;
-            color: var(--secondary-text);
-            margin-left: 8px;
-        }
-        
-        .database-icon {
-            color: #4285f4;
-        }
-        
-        .store-icon {
-            color: #34a853;
-        }
-        
-        .object-icon {
-            color: #ea4335;
-        }
-        
-        .preview-pane {
-            border-top: 1px solid var(--border-color);
-            padding: 16px;
-            max-height: 30%;
-            overflow-y: auto;
-        }
-        
-        .preview-title {
+
+        .sidebar-title {
+            font-size: 1.2rem;
             font-weight: 500;
-            margin-bottom: 8px;
         }
-        
-        .preview-content {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 13px;
-            white-space: pre-wrap;
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 4px;
-        }
-        
-        button {
+
+        .refresh-btn {
             background: none;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 6px 12px;
+            border: none;
             cursor: pointer;
+            color: var(--primary-color);
             display: flex;
             align-items: center;
             gap: 4px;
         }
-        
-        button:hover {
-            background-color: #f1f3f4;
+
+        .refresh-btn:hover {
+            color: var(--primary-light);
+        }
+
+        .database-list {
+            list-style: none;
+        }
+
+        .database-item {
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .database-item:hover {
+            background-color: rgba(98, 0, 238, 0.08);
+        }
+
+        .database-item.active {
+            background-color: rgba(98, 0, 238, 0.12);
+            font-weight: 500;
+        }
+
+        .store-list {
+            list-style: none;
+            margin-left: 24px;
+            margin-top: 4px;
+        }
+
+        .store-item {
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .store-item:hover {
+            background-color: rgba(98, 0, 238, 0.08);
+        }
+
+        .store-item.active {
+            background-color: rgba(98, 0, 238, 0.12);
+            font-weight: 500;
+        }
+
+        /* Breadcrumb Styles */
+        .breadcrumb {
+            grid-area: breadcrumb;
+            background-color: var(--surface);
+            border-bottom: 1px solid #e0e0e0;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+        }
+
+        .breadcrumb-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .breadcrumb-item:hover {
+            background-color: rgba(98, 0, 238, 0.08);
+        }
+
+        .breadcrumb-separator {
+            color: #757575;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            grid-area: main;
+            background-color: var(--surface);
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .content-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .content-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .action-btn:hover {
+            background-color: rgba(98, 0, 238, 0.08);
+        }
+
+        .action-btn.delete {
+            color: var(--error);
+        }
+
+        .action-btn.delete:hover {
+            background-color: rgba(176, 0, 32, 0.08);
+        }
+
+        .item-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .item-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .item-card:hover {
+            border-color: var(--primary-light);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .item-card.active {
+            border-color: var(--primary-color);
+            background-color: rgba(98, 0, 238, 0.04);
+        }
+
+        .item-icon {
+            font-size: 36px;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .item-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-meta {
+            font-size: 0.8rem;
+            color: #757575;
+        }
+
+        /* Preview Styles */
+        .preview {
+            grid-area: preview;
+            background-color: var(--surface);
+            border-left: 1px solid #e0e0e0;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .preview-header {
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .preview-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .preview-content {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Status Bar Styles */
+        .status-bar {
+            grid-area: status;
+            background-color: var(--surface);
+            border-top: 1px solid #e0e0e0;
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            color: #757575;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Empty State Styles */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #757575;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* Highlight.js overrides */
+        .hljs {
+            background: transparent !important;
+            padding: 0 !important;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="sidebar" id="sidebar">
-            <h3>IndexedDB Databases</h3>
-            <div id="databaseTree"></div>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">IndexedDB Explorer</div>
+            <button class="refresh-btn" id="refresh-btn">
+                <span class="material-icons">refresh</span>
+                Refresh
+            </button>
         </div>
-        
-        <div class="main-content">
-            <div class="toolbar">
-                <button id="refreshBtn">
-                    <span class="material-icons">refresh</span>
-                    Refresh
-                </button>
-                <button id="deleteBtn" disabled>
-                    <span class="material-icons">delete</span>
-                    Delete
-                </button>
-                <div class="breadcrumbs" id="breadcrumbs">
-                    <span>IndexedDB</span>
-                </div>
-            </div>
-            
-            <div class="file-list" id="fileList"></div>
-            
-            <div class="preview-pane" id="previewPane">
-                <div class="preview-title">Preview</div>
-                <div class="preview-content" id="previewContent">Select an item to preview</div>
-            </div>
+        <ul class="database-list" id="database-list">
+            <!-- Databases will be populated here -->
+        </ul>
+    </div>
+
+    <!-- Breadcrumb Navigation -->
+    <div class="breadcrumb" id="breadcrumb">
+        <div class="breadcrumb-item" data-type="root">
+            <span class="material-icons">home</span>
+            Home
         </div>
     </div>
-    
+
+    <!-- Main Content -->
+    <div class="main-content" id="main-content">
+        <div class="empty-state">
+            <span class="material-icons empty-icon">folder_open</span>
+            <div>Select a database or object store to view contents</div>
+        </div>
+    </div>
+
+    <!-- Preview Pane -->
+    <div class="preview" id="preview">
+        <div class="preview-header">
+            <div class="preview-title">Preview</div>
+        </div>
+        <div class="preview-content" id="preview-content">
+            Select an item to preview its contents
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="status-bar">
+        <div>Ready</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const databaseTree = document.getElementById('databaseTree');
-        const fileList = document.getElementById('fileList');
-        const breadcrumbs = document.getElementById('breadcrumbs');
-        const previewContent = document.getElementById('previewContent');
-        const refreshBtn = document.getElementById('refreshBtn');
-        const deleteBtn = document.getElementById('deleteBtn');
-        
-        let currentPath = [];
-        let selectedItem = null;
-        
-        // Initialize the explorer
-        refreshBtn.addEventListener('click', refreshDatabases);
-        deleteBtn.addEventListener('click', deleteSelectedItem);
-        
-        // Initial load
-        refreshDatabases();
-        
-        // Function to refresh the list of databases
-        async function refreshDatabases() {
-            try {
-                // Get list of databases (note: this API isn't available in all browsers)
-                const databases = await indexedDB.databases();
+        document.addEventListener('DOMContentLoaded', () => {
+            // State management
+            const state = {
+                currentDb: null,
+                currentStore: null,
+                currentItem: null,
+                databases: []
+            };
+
+            // DOM elements
+            const databaseList = document.getElementById('database-list');
+            const breadcrumb = document.getElementById('breadcrumb');
+            const mainContent = document.getElementById('main-content');
+            const previewContent = document.getElementById('preview-content');
+            const refreshBtn = document.getElementById('refresh-btn');
+            const statusBar = document.getElementById('status-bar');
+
+            // Initialize the explorer
+            refreshDatabases();
+
+            // Event listeners
+            refreshBtn.addEventListener('click', refreshDatabases);
+
+            // Functions
+            function refreshDatabases() {
+                updateStatus('Loading databases...');
+                databaseList.innerHTML = '<li class="database-item"><span class="material-icons">hourglass_empty</span>Loading...</li>';
                 
-                // Clear current tree
-                databaseTree.innerHTML = '';
+                indexedDB.databases().then(databases => {
+                    state.databases = databases;
+                    renderDatabaseList(databases);
+                    updateStatus(`${databases.length} databases found`);
+                }).catch(error => {
+                    databaseList.innerHTML = '<li class="database-item"><span class="material-icons">error</span>Error loading databases</li>';
+                    updateStatus('Error loading databases: ' + error.message, true);
+                    console.error('Error loading databases:', error);
+                });
+            }
+
+            function renderDatabaseList(databases) {
+                databaseList.innerHTML = '';
                 
-                // Add each database to the tree
+                if (databases.length === 0) {
+                    databaseList.innerHTML = '<li class="database-item"><span class="material-icons">info</span>No databases found</li>';
+                    return;
+                }
+
                 databases.forEach(db => {
-                    if (db.name) {
-                        const dbElement = createDatabaseElement(db.name);
-                        databaseTree.appendChild(dbElement);
-                    }
+                    const dbItem = document.createElement('li');
+                    dbItem.className = 'database-item';
+                    dbItem.dataset.dbName = db.name;
+                    dbItem.dataset.dbVersion = db.version;
+                    dbItem.innerHTML = `
+                        <span class="material-icons">storage</span>
+                        <div>
+                            <div>${db.name}</div>
+                            <div class="item-meta">Version: ${db.version}</div>
+                        </div>
+                    `;
+                    
+                    dbItem.addEventListener('click', () => openDatabase(db.name, db.version));
+                    databaseList.appendChild(dbItem);
+                });
+            }
+
+            function openDatabase(dbName, version) {
+                updateStatus(`Opening database: ${dbName}`);
+                state.currentDb = dbName;
+                state.currentStore = null;
+                state.currentItem = null;
+                
+                // Update active state in sidebar
+                document.querySelectorAll('.database-item').forEach(item => {
+                    item.classList.toggle('active', item.dataset.dbName === dbName);
                 });
                 
-                // If no databases found
-                if (databaseTree.children.length === 0) {
-                    databaseTree.innerHTML = '<div style="color: var(--secondary-text); padding: 8px;">No databases found</div>';
-                }
+                // Update breadcrumb
+                updateBreadcrumb([
+                    { type: 'root', name: 'Home', icon: 'home' },
+                    { type: 'db', name: dbName, icon: 'storage' }
+                ]);
                 
-                // Reset view
-                currentPath = [];
-                updateBreadcrumbs();
-                fileList.innerHTML = '<div style="color: var(--secondary-text); padding: 16px; text-align: center;">Select a database from the sidebar</div>';
-                previewContent.textContent = 'Select an item to preview';
-                
-            } catch (error) {
-                console.error('Error listing databases:', error);
-                showError('Failed to list databases. Make sure you\'re using a supported browser.');
-            }
-        }
-        
-        // Create a database tree item
-        function createDatabaseElement(dbName) {
-            const element = document.createElement('div');
-            element.className = 'file-item';
-            element.innerHTML = `
-                <span class="file-icon material-icons database-icon">storage</span>
-                <span class="file-name">${dbName}</span>
-            `;
-            
-            element.addEventListener('click', () => {
-                openDatabase(dbName);
-            });
-            
-            return element;
-        }
-        
-        // Open a database and show its object stores
-        async function openDatabase(dbName) {
-            try {
-                currentPath = ['IndexedDB', dbName];
-                updateBreadcrumbs();
-                
-                // Open the database (just to get structure, we'll close it immediately)
-                const request = indexedDB.open(dbName);
-                
-                request.onerror = (event) => {
-                    throw event.target.error;
-                };
+                // Open the database to get object stores
+                const request = indexedDB.open(dbName, version);
                 
                 request.onsuccess = (event) => {
                     const db = event.target.result;
-                    
-                    // Clear file list
-                    fileList.innerHTML = '';
-                    
-                    // Add each object store
-                    for (let i = 0; i < db.objectStoreNames.length; i++) {
-                        const storeName = db.objectStoreNames[i];
-                        const storeElement = createStoreElement(dbName, storeName);
-                        fileList.appendChild(storeElement);
-                    }
-                    
-                    if (db.objectStoreNames.length === 0) {
-                        fileList.innerHTML = '<div style="color: var(--secondary-text); padding: 16px; text-align: center;">No object stores in this database</div>';
-                    }
-                    
+                    const storeNames = Array.from(db.objectStoreNames);
                     db.close();
+                    
+                    renderObjectStores(storeNames);
+                    updateStatus(`Database opened: ${dbName} (${storeNames.length} object stores)`);
                 };
-                
-            } catch (error) {
-                console.error('Error opening database:', error);
-                showError(`Failed to open database: ${error.message}`);
-            }
-        }
-        
-        // Create an object store element
-        function createStoreElement(dbName, storeName) {
-            const element = document.createElement('div');
-            element.className = 'file-item';
-            element.innerHTML = `
-                <span class="file-icon material-icons store-icon">folder</span>
-                <span class="file-name">${storeName}</span>
-                <span class="file-meta">Object Store</span>
-            `;
-            
-            element.addEventListener('click', () => {
-                openObjectStore(dbName, storeName);
-            });
-            
-            return element;
-        }
-        
-        // Open an object store and show its contents
-        async function openObjectStore(dbName, storeName) {
-            try {
-                currentPath = ['IndexedDB', dbName, storeName];
-                updateBreadcrumbs();
-                
-                const request = indexedDB.open(dbName);
                 
                 request.onerror = (event) => {
-                    throw event.target.error;
+                    updateStatus(`Error opening database: ${event.target.error}`, true);
+                    console.error('Error opening database:', event.target.error);
                 };
+            }
+
+            function renderObjectStores(storeNames) {
+                mainContent.innerHTML = '';
+                
+                if (storeNames.length === 0) {
+                    mainContent.innerHTML = `
+                        <div class="empty-state">
+                            <span class="material-icons empty-icon">info</span>
+                            <div>No object stores found in this database</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const header = document.createElement('div');
+                header.className = 'content-header';
+                header.innerHTML = `
+                    <div class="content-title">Object Stores</div>
+                `;
+                mainContent.appendChild(header);
+                
+                const list = document.createElement('ul');
+                list.className = 'item-list';
+                
+                storeNames.forEach(storeName => {
+                    const item = document.createElement('li');
+                    item.className = 'item-card';
+                    item.dataset.storeName = storeName;
+                    item.innerHTML = `
+                        <div class="item-icon material-icons">folder</div>
+                        <div class="item-name">${storeName}</div>
+                        <div class="item-meta">Object Store</div>
+                    `;
+                    
+                    item.addEventListener('click', () => openObjectStore(storeName));
+                    list.appendChild(item);
+                });
+                
+                mainContent.appendChild(list);
+            }
+
+            function openObjectStore(storeName) {
+                updateStatus(`Loading items from: ${storeName}`);
+                state.currentStore = storeName;
+                state.currentItem = null;
+                
+                // Update breadcrumb
+                updateBreadcrumb([
+                    { type: 'root', name: 'Home', icon: 'home' },
+                    { type: 'db', name: state.currentDb, icon: 'storage' },
+                    { type: 'store', name: storeName, icon: 'folder' }
+                ]);
+                
+                // Open the database and object store
+                const request = indexedDB.open(state.currentDb);
                 
                 request.onsuccess = (event) => {
                     const db = event.target.result;
                     const transaction = db.transaction(storeName, 'readonly');
                     const store = transaction.objectStore(storeName);
-                    const getAllRequest = store.getAll();
+                    const items = [];
                     
-                    getAllRequest.onerror = (event) => {
-                        throw event.target.error;
+                    // Get all items in the store
+                    const cursorRequest = store.openCursor();
+                    
+                    cursorRequest.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            items.push({
+                                key: cursor.key,
+                                value: cursor.value
+                            });
+                            cursor.continue();
+                        } else {
+                            db.close();
+                            renderStoreItems(items);
+                            updateStatus(`Loaded ${items.length} items from ${storeName}`);
+                        }
                     };
                     
-                    getAllRequest.onsuccess = (event) => {
-                        const items = event.target.result;
-                        
-                        // Clear file list
-                        fileList.innerHTML = '';
-                        
-                        if (items.length === 0) {
-                            fileList.innerHTML = '<div style="color: var(--secondary-text); padding: 16px; text-align: center;">No items in this object store</div>';
-                        } else {
-                            // Add each item
-                            items.forEach((item, index) => {
-                                const itemElement = createObjectElement(dbName, storeName, item, index);
-                                fileList.appendChild(itemElement);
-                            });
-                        }
-                        
+                    cursorRequest.onerror = (event) => {
                         db.close();
+                        updateStatus(`Error reading items: ${event.target.error}`, true);
+                        console.error('Error reading items:', event.target.error);
                     };
                 };
-                
-            } catch (error) {
-                console.error('Error opening object store:', error);
-                showError(`Failed to open object store: ${error.message}`);
-            }
-        }
-        
-        // Create an object element
-        function createObjectElement(dbName, storeName, item, index) {
-            const element = document.createElement('div');
-            element.className = 'file-item';
-            
-            // Try to get a meaningful name or ID for the object
-            let displayName = `Item ${index + 1}`;
-            if (item.id !== undefined) displayName = `ID: ${item.id}`;
-            else if (item.name !== undefined) displayName = item.name;
-            else if (item.key !== undefined) displayName = `Key: ${item.key}`;
-            else if (item.fileName !== undefined) displayName = item.fileName;
-            else if (item.filename !== undefined) displayName = item.filename;
-            else if (item.title !== undefined) displayName = item.title;
-            
-            element.innerHTML = `
-                <span class="file-icon material-icons object-icon">insert_drive_file</span>
-                <span class="file-name">${displayName}</span>
-                <span class="file-meta">${typeof item}</span>
-            `;
-            
-            element.addEventListener('click', () => {
-                selectItem(element, { dbName, storeName, item });
-                previewObject(item);
-            });
-            
-            return element;
-        }
-        
-        // Select an item in the file list
-        function selectItem(element, itemData) {
-            // Deselect previous item
-            const previouslySelected = document.querySelector('.file-item.selected');
-            if (previouslySelected) {
-                previouslySelected.classList.remove('selected');
-            }
-            
-            // Select new item
-            element.classList.add('selected');
-            selectedItem = itemData;
-            deleteBtn.disabled = false;
-        }
-        
-        // Preview an object's contents
-        function previewObject(obj) {
-            try {
-                previewContent.textContent = JSON.stringify(obj, null, 2);
-            } catch (error) {
-                previewContent.textContent = `Unable to display object: ${error.message}`;
-            }
-        }
-        
-        // Delete the selected item
-        async function deleteSelectedItem() {
-            if (!selectedItem) return;
-            
-            try {
-                const { dbName, storeName, item } = selectedItem;
-                
-                const request = indexedDB.open(dbName);
                 
                 request.onerror = (event) => {
-                    throw event.target.error;
+                    updateStatus(`Error opening database: ${event.target.error}`, true);
+                    console.error('Error opening database:', event.target.error);
                 };
+            }
+
+            function renderStoreItems(items) {
+                mainContent.innerHTML = '';
+                
+                if (items.length === 0) {
+                    mainContent.innerHTML = `
+                        <div class="empty-state">
+                            <span class="material-icons empty-icon">info</span>
+                            <div>No items found in this object store</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const header = document.createElement('div');
+                header.className = 'content-header';
+                header.innerHTML = `
+                    <div class="content-title">Items in ${state.currentStore}</div>
+                    <div class="content-actions">
+                        <button class="action-btn delete" id="delete-store-btn">
+                            <span class="material-icons">delete</span>
+                            Delete Store
+                        </button>
+                    </div>
+                `;
+                mainContent.appendChild(header);
+                
+                // Add event listener for delete store button
+                document.getElementById('delete-store-btn').addEventListener('click', deleteCurrentStore);
+                
+                const list = document.createElement('ul');
+                list.className = 'item-list';
+                
+                items.forEach(item => {
+                    const itemCard = document.createElement('li');
+                    itemCard.className = 'item-card';
+                    itemCard.dataset.itemKey = JSON.stringify(item.key);
+                    itemCard.innerHTML = `
+                        <div class="item-icon material-icons">description</div>
+                        <div class="item-name">${formatKey(item.key)}</div>
+                        <div class="item-meta">Key: ${typeof item.key}</div>
+                    `;
+                    
+                    itemCard.addEventListener('click', () => previewItem(item));
+                    list.appendChild(itemCard);
+                });
+                
+                mainContent.appendChild(list);
+            }
+
+            function previewItem(item) {
+                state.currentItem = item;
+                
+                // Highlight the selected item
+                document.querySelectorAll('.item-card').forEach(card => {
+                    card.classList.toggle('active', card.dataset.itemKey === JSON.stringify(item.key));
+                });
+                
+                // Display the item in the preview pane
+                let previewText;
+                try {
+                    if (typeof item.value === 'object' && item.value !== null) {
+                        previewText = JSON.stringify(item.value, null, 2);
+                    } else {
+                        previewText = String(item.value);
+                    }
+                } catch (e) {
+                    previewText = `[Unable to display value: ${e.message}]`;
+                }
+                
+                previewContent.innerHTML = `<pre><code>${escapeHtml(previewText)}</code></pre>`;
+                hljs.highlightElement(previewContent.querySelector('code'));
+                
+                // Update breadcrumb if we're not already showing the item level
+                if (breadcrumb.lastChild.dataset.type !== 'item') {
+                    updateBreadcrumb([
+                        { type: 'root', name: 'Home', icon: 'home' },
+                        { type: 'db', name: state.currentDb, icon: 'storage' },
+                        { type: 'store', name: state.currentStore, icon: 'folder' },
+                        { type: 'item', name: formatKey(item.key), icon: 'description' }
+                    ]);
+                }
+            }
+
+            function deleteCurrentStore() {
+                if (!state.currentDb || !state.currentStore) return;
+                
+                if (!confirm(`Are you sure you want to delete the object store "${state.currentStore}"? This cannot be undone.`)) {
+                    return;
+                }
+                
+                updateStatus(`Deleting object store: ${state.currentStore}`);
+                
+                // We need to open the database with a higher version to delete the store
+                const request = indexedDB.open(state.currentDb);
                 
                 request.onsuccess = (event) => {
                     const db = event.target.result;
-                    const transaction = db.transaction(storeName, 'readwrite');
-                    const store = transaction.objectStore(storeName);
+                    const version = db.version + 1;
+                    db.close();
                     
-                    // Try to delete by key
-                    let deleteRequest;
-                    if (item.id !== undefined) {
-                        deleteRequest = store.delete(item.id);
-                    } else if (item.key !== undefined) {
-                        deleteRequest = store.delete(item.key);
-                    } else {
-                        // If no obvious key, we can't delete
-                        throw new Error('Cannot determine key for deletion');
-                    }
+                    // Reopen with higher version
+                    const upgradeRequest = indexedDB.open(state.currentDb, version);
                     
-                    deleteRequest.onerror = (event) => {
-                        throw event.target.error;
+                    upgradeRequest.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        db.deleteObjectStore(state.currentStore);
+                        updateStatus(`Object store "${state.currentStore}" deleted`);
                     };
                     
-                    deleteRequest.onsuccess = () => {
-                        // Refresh the view
-                        openObjectStore(dbName, storeName);
-                        previewContent.textContent = 'Item deleted successfully';
-                        selectedItem = null;
-                        deleteBtn.disabled = true;
+                    upgradeRequest.onsuccess = (event) => {
+                        event.target.result.close();
+                        refreshDatabases();
+                        mainContent.innerHTML = `
+                            <div class="empty-state">
+                                <span class="material-icons empty-icon">check_circle</span>
+                                <div>Object store "${state.currentStore}" deleted successfully</div>
+                            </div>
+                        `;
                     };
                     
-                    transaction.oncomplete = () => {
-                        db.close();
+                    upgradeRequest.onerror = (event) => {
+                        updateStatus(`Error deleting object store: ${event.target.error}`, true);
+                        console.error('Error deleting object store:', event.target.error);
                     };
                 };
                 
-            } catch (error) {
-                console.error('Error deleting item:', error);
-                showError(`Failed to delete item: ${error.message}`);
+                request.onerror = (event) => {
+                    updateStatus(`Error opening database: ${event.target.error}`, true);
+                    console.error('Error opening database:', event.target.error);
+                };
             }
-        }
-        
-        // Update breadcrumbs navigation
-        function updateBreadcrumbs() {
-            breadcrumbs.innerHTML = '';
-            
-            currentPath.forEach((part, index) => {
-                const isLast = index === currentPath.length - 1;
-                const span = document.createElement('span');
+
+            function updateBreadcrumb(items) {
+                breadcrumb.innerHTML = '';
                 
-                if (!isLast) {
-                    span.style.cursor = 'pointer';
-                    span.style.color = 'var(--primary-color)';
-                    span.addEventListener('click', () => {
-                        navigateTo(index);
-                    });
-                }
-                
-                span.textContent = part;
-                breadcrumbs.appendChild(span);
-                
-                if (!isLast) {
-                    const sep = document.createElement('span');
-                    sep.className = 'breadcrumb-sep';
-                    sep.textContent = '/';
-                    breadcrumbs.appendChild(sep);
-                }
-            });
-        }
-        
-        // Navigate to a specific point in the path
-        function navigateTo(index) {
-            const newPath = currentPath.slice(0, index + 1);
-            
-            if (newPath.length === 1) {
-                // Back to root
-                fileList.innerHTML = '<div style="color: var(--secondary-text); padding: 16px; text-align: center;">Select a database from the sidebar</div>';
-                previewContent.textContent = 'Select an item to preview';
-            } else if (newPath.length === 2) {
-                // Database level
-                openDatabase(newPath[1]);
-            } else if (newPath.length === 3) {
-                // Object store level
-                openObjectStore(newPath[1], newPath[2]);
+                items.forEach((item, index) => {
+                    const isLast = index === items.length - 1;
+                    
+                    const crumb = document.createElement('div');
+                    crumb.className = 'breadcrumb-item';
+                    crumb.dataset.type = item.type;
+                    
+                    if (item.type === 'db') crumb.dataset.dbName = item.name;
+                    if (item.type === 'store') crumb.dataset.storeName = item.name;
+                    if (item.type === 'item') crumb.dataset.itemKey = state.currentItem ? JSON.stringify(state.currentItem.key) : '';
+                    
+                    crumb.innerHTML = `
+                        <span class="material-icons">${item.icon}</span>
+                        ${item.name}
+                    `;
+                    
+                    crumb.addEventListener('click', () => navigateFromBreadcrumb(item.type, index));
+                    breadcrumb.appendChild(crumb);
+                    
+                    if (!isLast) {
+                        const separator = document.createElement('div');
+                        separator.className = 'breadcrumb-separator';
+                        separator.innerHTML = '<span class="material-icons">chevron_right</span>';
+                        breadcrumb.appendChild(separator);
+                    }
+                });
             }
-        }
-        
-        // Show an error message
-        function showError(message) {
-            fileList.innerHTML = `<div style="color: #d32f2f; padding: 16px; background: #ffebee; border-radius: 4px;">${message}</div>`;
-        }
-    });
+
+            function navigateFromBreadcrumb(type, index) {
+                switch (type) {
+                    case 'root':
+                        // Reset to initial state
+                        state.currentDb = null;
+                        state.currentStore = null;
+                        state.currentItem = null;
+                        
+                        // Clear active states
+                        document.querySelectorAll('.database-item').forEach(item => item.classList.remove('active'));
+                        document.querySelectorAll('.item-card').forEach(item => item.classList.remove('active'));
+                        
+                        // Show empty main content
+                        mainContent.innerHTML = `
+                            <div class="empty-state">
+                                <span class="material-icons empty-icon">folder_open</span>
+                                <div>Select a database or object store to view contents</div>
+                            </div>
+                        `;
+                        
+                        // Reset preview
+                        previewContent.textContent = 'Select an item to preview its contents';
+                        break;
+                        
+                    case 'db':
+                        // Go back to database view
+                        openDatabase(state.currentDb, state.databases.find(db => db.name === state.currentDb).version);
+                        break;
+                        
+                    case 'store':
+                        // Go back to store view
+                        openObjectStore(state.currentStore);
+                        break;
+                        
+                    case 'item':
+                        // Item is already selected, no action needed
+                        break;
+                }
+            }
+
+            function updateStatus(message, isError = false) {
+                statusBar.innerHTML = isError 
+                    ? `<span style="color: var(--error)">${message}</span>`
+                    : message;
+            }
+
+            function formatKey(key) {
+                if (typeof key === 'object' && key !== null) {
+                    try {
+                        return JSON.stringify(key);
+                    } catch (e) {
+                        return '[Complex Key]';
+                    }
+                }
+                return String(key);
+            }
+
+            function escapeHtml(unsafe) {
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+        });
     </script>
 </body>
 </html>
