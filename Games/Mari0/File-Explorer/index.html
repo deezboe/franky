@@ -119,10 +119,6 @@
             color: #ea4335;
         }
         
-        .image-icon {
-            color: #fbbc04;
-        }
-        
         .preview-pane {
             border-top: 1px solid var(--border-color);
             padding: 16px;
@@ -144,11 +140,6 @@
             border-radius: 4px;
         }
         
-        .image-preview {
-            max-width: 100%;
-            max-height: 200px;
-        }
-        
         button {
             background: none;
             border: 1px solid var(--border-color);
@@ -162,19 +153,6 @@
         
         button:hover {
             background-color: #f1f3f4;
-        }
-        
-        .edit-button {
-            margin-left: 10px;
-            padding: 2px 8px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        
-        .path-display {
-            font-family: 'Roboto Mono', monospace;
-            color: var(--secondary-text);
-            font-size: 13px;
         }
     </style>
 </head>
@@ -194,10 +172,6 @@
                 <button id="deleteBtn" disabled>
                     <span class="material-icons">delete</span>
                     Delete
-                </button>
-                <button id="editBtn" disabled>
-                    <span class="material-icons">edit</span>
-                    Edit
                 </button>
                 <div class="breadcrumbs" id="breadcrumbs">
                     <span>IndexedDB</span>
@@ -221,7 +195,6 @@
         const previewContent = document.getElementById('previewContent');
         const refreshBtn = document.getElementById('refreshBtn');
         const deleteBtn = document.getElementById('deleteBtn');
-        const editBtn = document.getElementById('editBtn');
         
         let currentPath = [];
         let selectedItem = null;
@@ -229,7 +202,6 @@
         // Initialize the explorer
         refreshBtn.addEventListener('click', refreshDatabases);
         deleteBtn.addEventListener('click', deleteSelectedItem);
-        editBtn.addEventListener('click', editSelectedItem);
         
         // Initial load
         refreshDatabases();
@@ -323,19 +295,14 @@
             }
         }
         
-        // Create an object store element with path display
+        // Create an object store element
         function createStoreElement(dbName, storeName) {
             const element = document.createElement('div');
             element.className = 'file-item';
-            
-            // Create the full path display
-            const fullPath = `${dbName}/${storeName}`;
-            
             element.innerHTML = `
                 <span class="file-icon material-icons store-icon">folder</span>
                 <span class="file-name">${storeName}</span>
                 <span class="file-meta">Object Store</span>
-                <span class="path-display">${fullPath}</span>
             `;
             
             element.addEventListener('click', () => {
@@ -393,103 +360,32 @@
             }
         }
         
-        // Create an object element with enhanced path display
+        // Create an object element
         function createObjectElement(dbName, storeName, item, index) {
             const element = document.createElement('div');
             element.className = 'file-item';
             
-            // Enhanced file name detection
-            let displayName = getDisplayName(item, index);
-            let iconType = 'object-icon';
-            let icon = 'insert_drive_file';
-            
-            // Check if this is an image file
-            if (isImageItem(item)) {
-                iconType = 'image-icon';
-                icon = 'image';
-            }
-            
-            // Create the full path display
-            const fullPath = `${dbName}/${storeName}/${displayName}`;
+            // Try to get a meaningful name or ID for the object
+            let displayName = `Item ${index + 1}`;
+            if (item.id !== undefined) displayName = `ID: ${item.id}`;
+            else if (item.name !== undefined) displayName = item.name;
+            else if (item.key !== undefined) displayName = `Key: ${item.key}`;
+            else if (item.fileName !== undefined) displayName = item.fileName;
+            else if (item.filename !== undefined) displayName = item.filename;
+            else if (item.title !== undefined) displayName = item.title;
             
             element.innerHTML = `
-                <span class="file-icon material-icons ${iconType}">${icon}</span>
+                <span class="file-icon material-icons object-icon">insert_drive_file</span>
                 <span class="file-name">${displayName}</span>
-                <span class="file-meta">${getTypeDescription(item)}</span>
-                <span class="path-display">${fullPath}</span>
-                <button class="edit-button" data-key="${displayName}">Edit Data</button>
+                <span class="file-meta">${typeof item}</span>
             `;
             
-            // Add click handler for the main element
-            element.addEventListener('click', (e) => {
-                // Don't trigger if clicking on the edit button
-                if (!e.target.classList.contains('edit-button')) {
-                    selectItem(element, { dbName, storeName, item });
-                    previewObject(item);
-                }
-            });
-            
-            // Add click handler for the edit button
-            const editButton = element.querySelector('.edit-button');
-            editButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                editData(displayName, 'indexedDB', dbName, storeName, item);
+            element.addEventListener('click', () => {
+                selectItem(element, { dbName, storeName, item });
+                previewObject(item);
             });
             
             return element;
-        }
-        
-        // Edit the selected item
-        function editSelectedItem() {
-            if (!selectedItem) return;
-            const { dbName, storeName, item } = selectedItem;
-            const displayName = getDisplayName(item, 0); // Using index 0 since we already have the item
-            editData(displayName, 'indexedDB', dbName, storeName, item);
-        }
-        
-        // Enhanced function to get display name for files
-        function getDisplayName(item, index) {
-            // Check for common file name properties (case insensitive)
-            const nameKeys = ['fileName', 'filename', 'name', 'title', 'imageName', 'imgName', 'file'];
-            for (const key of nameKeys) {
-                if (item[key] !== undefined) {
-                    return item[key];
-                }
-            }
-            
-            // Check for keys with 'name' or 'file' in them
-            for (const key in item) {
-                if (key.toLowerCase().includes('name') || key.toLowerCase().includes('file')) {
-                    return item[key];
-                }
-            }
-            
-            // Fallback to ID or key if available
-            if (item.id !== undefined) return `ID: ${item.id}`;
-            if (item.key !== undefined) return `Key: ${item.key}`;
-            
-            // Final fallback
-            return `Item ${index + 1}`;
-        }
-        
-        // Check if item is an image
-        function isImageItem(item) {
-            if (typeof item === 'object' && item !== null) {
-                // Check for common image properties
-                if (item.type && item.type.startsWith('image/')) return true;
-                if (item.url && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.url)) return true;
-                if (item.fileName && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.fileName)) return true;
-                if (item.name && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.name)) return true;
-            }
-            return false;
-        }
-        
-        // Get type description for an item
-        function getTypeDescription(item) {
-            if (isImageItem(item)) return 'Image';
-            if (typeof item === 'string') return 'Text';
-            if (typeof item === 'object' && item !== null) return 'Object';
-            return typeof item;
         }
         
         // Select an item in the file list
@@ -504,116 +400,15 @@
             element.classList.add('selected');
             selectedItem = itemData;
             deleteBtn.disabled = false;
-            editBtn.disabled = false;
         }
         
         // Preview an object's contents
         function previewObject(obj) {
             try {
-                if (isImageItem(obj)) {
-                    // Special handling for image preview
-                    let imageUrl = '';
-                    if (obj.url) {
-                        imageUrl = obj.url;
-                    } else if (obj.data) {
-                        // Handle base64 or blob data
-                        imageUrl = typeof obj.data === 'string' ? obj.data : URL.createObjectURL(obj.data);
-                    }
-                    
-                    if (imageUrl) {
-                        previewContent.innerHTML = `
-                            <div>Image Preview:</div>
-                            <img src="${imageUrl}" class="image-preview" alt="Preview">
-                            <div style="margin-top: 10px;">Metadata:</div>
-                            <pre>${JSON.stringify(removeLargeProperties(obj), null, 2)}</pre>
-                        `;
-                        return;
-                    }
-                }
-                
-                // Default JSON preview
                 previewContent.textContent = JSON.stringify(obj, null, 2);
             } catch (error) {
                 previewContent.textContent = `Unable to display object: ${error.message}`;
             }
-        }
-        
-        // Function to handle editing data (from the second example)
-        function editData(key, storageType, dbName = null, storeName = null, currentValue = null) {
-            if (!key) {
-                alert("No key provided for editing.");
-                return;
-            }
-
-            let newValue;
-            if (typeof currentValue === 'object' && currentValue !== null) {
-                // For objects, show the current JSON in the prompt
-                newValue = prompt("Enter new value for " + key, JSON.stringify(currentValue, null, 2));
-                try {
-                    if (newValue) newValue = JSON.parse(newValue);
-                } catch (e) {
-                    alert("Invalid JSON format");
-                    return;
-                }
-            } else {
-                // For primitive values, use simple prompt
-                newValue = prompt("Enter new value for " + key, currentValue);
-            }
-
-            if (newValue !== null) {
-                if (storageType === 'indexedDB' && dbName && storeName) {
-                    const openRequest = indexedDB.open(dbName, 1); // Open DB with version 1
-
-                    openRequest.onsuccess = function(event) {
-                        const dbInstance = event.target.result;
-                        const transaction = dbInstance.transaction(storeName, "readwrite");
-                        const objectStore = transaction.objectStore(storeName);
-                        
-                        // Check if we're updating by key or need to use put with the full object
-                        let updateRequest;
-                        if (currentValue && currentValue.key) {
-                            // If the object has a key property, use it
-                            updateRequest = objectStore.put(newValue, currentValue.key);
-                        } else {
-                            // Otherwise try to use the key directly
-                            updateRequest = objectStore.put(newValue, key);
-                        }
-
-                        updateRequest.onsuccess = function() {
-                            alert(`IndexedDB data for ${key} updated successfully!`);
-                            // Refresh the current view
-                            if (currentPath.length === 3) {
-                                openObjectStore(dbName, storeName);
-                            }
-                        };
-
-                        updateRequest.onerror = function() {
-                            alert("Error updating IndexedDB data.");
-                        };
-                    };
-
-                    openRequest.onerror = function() {
-                        alert("Error opening IndexedDB database.");
-                    };
-                }
-            }
-        }
-        
-        // Helper to remove large properties (like binary data) for preview
-        function removeLargeProperties(obj) {
-            if (typeof obj !== 'object' || obj === null) return obj;
-            
-            const result = {};
-            for (const key in obj) {
-                if (typeof obj[key] === 'string' && obj[key].length > 100) {
-                    result[key] = `[${obj[key].length} characters of data]`;
-                } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-                    result[key] = removeLargeProperties(obj[key]);
-                } else {
-                    result[key] = obj[key];
-                }
-            }
-            return result;
         }
         
         // Delete the selected item
@@ -655,7 +450,6 @@
                         previewContent.textContent = 'Item deleted successfully';
                         selectedItem = null;
                         deleteBtn.disabled = true;
-                        editBtn.disabled = true;
                     };
                     
                     transaction.oncomplete = () => {
