@@ -169,6 +169,7 @@
             gap: 4px;
             padding: 4px 8px;
             border-radius: 4px;
+            font-size: 0.9rem;
         }
 
         .action-btn:hover {
@@ -196,6 +197,7 @@
             padding: 12px;
             cursor: pointer;
             transition: all 0.2s ease;
+            position: relative;
         }
 
         .item-card:hover {
@@ -227,6 +229,36 @@
             color: #757575;
         }
 
+        .item-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: none;
+        }
+
+        .item-card:hover .item-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .item-action-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #555;
+        }
+
+        .item-action-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
         /* Preview Styles */
         .preview {
             grid-area: preview;
@@ -240,6 +272,9 @@
             margin-bottom: 12px;
             padding-bottom: 8px;
             border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .preview-title {
@@ -320,6 +355,47 @@
             color: #757575;
             margin-left: 8px;
         }
+
+        /* Upload styles */
+        .upload-container {
+            margin-top: 16px;
+            border: 1px dashed #e0e0e0;
+            border-radius: 4px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .upload-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .upload-btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .upload-input {
+            display: none;
+        }
+
+        /* File preview styles */
+        .file-preview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 8px;
+        }
+
+        .binary-preview {
+            color: #757575;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -357,6 +433,12 @@
     <div class="preview" id="preview">
         <div class="preview-header">
             <div class="preview-title">Preview</div>
+            <div class="content-actions">
+                <button class="action-btn delete" id="delete-item-btn" style="display: none;">
+                    <span class="material-icons">delete</span>
+                    Delete Item
+                </button>
+            </div>
         </div>
         <div class="preview-content" id="preview-content">
             Select an item to preview its contents
@@ -367,6 +449,9 @@
     <div class="status-bar" id="status-bar">
         <div>Ready</div>
     </div>
+
+    <!-- Hidden file input for uploads -->
+    <input type="file" id="file-upload" class="upload-input" multiple>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script>
@@ -387,12 +472,16 @@
             const previewContent = document.getElementById('preview-content');
             const refreshBtn = document.getElementById('refresh-btn');
             const statusBar = document.getElementById('status-bar');
+            const fileUpload = document.getElementById('file-upload');
+            const deleteItemBtn = document.getElementById('delete-item-btn');
 
             // Initialize the explorer
             refreshDatabases();
 
             // Event listeners
             refreshBtn.addEventListener('click', refreshDatabases);
+            fileUpload.addEventListener('change', handleFileUpload);
+            deleteItemBtn.addEventListener('click', deleteCurrentItem);
 
             // Functions
             function refreshDatabases() {
@@ -741,8 +830,19 @@
                 header.className = 'content-header';
                 header.innerHTML = `
                     <div class="content-title">${state.currentStore || state.currentDb}</div>
+                    <div class="content-actions">
+                        <button class="action-btn" id="upload-files-btn">
+                            <span class="material-icons">upload</span>
+                            Upload Files
+                        </button>
+                    </div>
                 `;
                 mainContent.appendChild(header);
+                
+                // Add event listener for upload button
+                document.getElementById('upload-files-btn').addEventListener('click', () => {
+                    fileUpload.click();
+                });
                 
                 if (folders.length === 0 && files.length === 0) {
                     mainContent.innerHTML += `
@@ -777,18 +877,35 @@
                     const displayName = extractFilename(file.key);
                     const fileType = getFileTypeInfo(file);
                     
-                    const item = document.createElement('li');
-                    item.className = 'item-card';
-                    item.dataset.key = JSON.stringify(file.key);
-                    item.dataset.storeName = file.storeName;
-                    item.innerHTML = `
+                    const itemCard = document.createElement('li');
+                    itemCard.className = 'item-card';
+                    itemCard.dataset.itemKey = JSON.stringify(file.key);
+                    itemCard.dataset.storeName = file.storeName;
+                    itemCard.innerHTML = `
                         <div class="item-icon material-icons">insert_drive_file</div>
                         <div class="item-name">${displayName}</div>
                         <div class="item-meta">${fileType}</div>
+                        <div class="item-actions">
+                            <button class="item-action-btn delete-item" title="Delete">
+                                <span class="material-icons" style="font-size: 16px;">delete</span>
+                            </button>
+                        </div>
                     `;
                     
-                    item.addEventListener('click', () => previewItem(file));
-                    list.appendChild(item);
+                    itemCard.addEventListener('click', (e) => {
+                        // Only preview if not clicking on action buttons
+                        if (!e.target.closest('.item-action-btn')) {
+                            previewItem(file);
+                        }
+                    });
+                    
+                    // Add delete handler
+                    itemCard.querySelector('.delete-item').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteItem(file);
+                    });
+                    
+                    list.appendChild(itemCard);
                 });
                 
                 mainContent.appendChild(list);
@@ -896,7 +1013,19 @@
                             <span class="material-icons empty-icon">info</span>
                             <div>No items found in this object store</div>
                         </div>
+                        <div class="upload-container">
+                            <button class="upload-btn" id="upload-files-btn">
+                                <span class="material-icons">upload</span>
+                                Upload Files
+                            </button>
+                            <input type="file" id="file-upload" class="upload-input" multiple>
+                        </div>
                     `;
+                    
+                    // Add event listener for upload button
+                    document.getElementById('upload-files-btn').addEventListener('click', () => {
+                        fileUpload.click();
+                    });
                     return;
                 }
                 
@@ -905,6 +1034,10 @@
                 header.innerHTML = `
                     <div class="content-title">Items in ${state.currentStore}</div>
                     <div class="content-actions">
+                        <button class="action-btn" id="upload-files-btn">
+                            <span class="material-icons">upload</span>
+                            Upload Files
+                        </button>
                         <button class="action-btn delete" id="delete-store-btn">
                             <span class="material-icons">delete</span>
                             Delete Store
@@ -913,7 +1046,11 @@
                 `;
                 mainContent.appendChild(header);
                 
-                // Add event listener for delete store button
+                // Add event listeners for buttons
+                document.getElementById('upload-files-btn').addEventListener('click', () => {
+                    fileUpload.click();
+                });
+                
                 document.getElementById('delete-store-btn').addEventListener('click', deleteCurrentStore);
                 
                 const list = document.createElement('ul');
@@ -931,9 +1068,26 @@
                         <div class="item-icon material-icons">insert_drive_file</div>
                         <div class="item-name">${displayName}</div>
                         <div class="item-meta">${fileType}</div>
+                        <div class="item-actions">
+                            <button class="item-action-btn delete-item" title="Delete">
+                                <span class="material-icons" style="font-size: 16px;">delete</span>
+                            </button>
+                        </div>
                     `;
                     
-                    itemCard.addEventListener('click', () => previewItem(item));
+                    itemCard.addEventListener('click', (e) => {
+                        // Only preview if not clicking on action buttons
+                        if (!e.target.closest('.item-action-btn')) {
+                            previewItem(item);
+                        }
+                    });
+                    
+                    // Add delete handler
+                    itemCard.querySelector('.delete-item').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteItem(item);
+                    });
+                    
                     list.appendChild(itemCard);
                 });
                 
@@ -954,13 +1108,20 @@
                     const extension = filename.includes('.') 
                         ? filename.split('.').pop().toUpperCase() 
                         : 'FILE';
-                    return `${extension} file | ${typeof item.value}`;
+                    return `${extension} file | ${getValueType(item.value)}`;
                 }
-                return `Key: ${typeof item.key} | Value: ${typeof item.value}`;
+                return `Key: ${typeof item.key} | Value: ${getValueType(item.value)}`;
+            }
+
+            function getValueType(value) {
+                if (value instanceof ArrayBuffer) return 'ArrayBuffer';
+                if (value instanceof Blob) return 'Blob';
+                return typeof value;
             }
 
             function previewItem(item) {
                 state.currentItem = item;
+                deleteItemBtn.style.display = 'block';
                 
                 // Highlight the selected item
                 document.querySelectorAll('.item-card').forEach(card => {
@@ -970,20 +1131,64 @@
                     );
                 });
                 
-                // Display the item in the preview pane
-                let previewText;
-                try {
-                    if (typeof item.value === 'object' && item.value !== null) {
-                        previewText = JSON.stringify(item.value, null, 2);
-                    } else {
-                        previewText = String(item.value);
-                    }
-                } catch (e) {
-                    previewText = `[Unable to display value: ${e.message}]`;
-                }
+                // Clear previous preview
+                previewContent.innerHTML = '';
                 
-                previewContent.innerHTML = `<pre><code>${escapeHtml(previewText)}</code></pre>`;
-                hljs.highlightElement(previewContent.querySelector('code'));
+                // Handle different types of values
+                if (item.value instanceof Blob) {
+                    // Handle Blob (likely a file)
+                    const url = URL.createObjectURL(item.value);
+                    
+                    if (item.value.type.startsWith('image/')) {
+                        // Image preview
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.className = 'file-preview';
+                        img.onload = () => {
+                            URL.revokeObjectURL(url);
+                        };
+                        previewContent.appendChild(img);
+                    } else if (item.value.type.startsWith('text/')) {
+                        // Text file preview
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const pre = document.createElement('pre');
+                            const code = document.createElement('code');
+                            code.textContent = e.target.result;
+                            pre.appendChild(code);
+                            previewContent.appendChild(pre);
+                            hljs.highlightElement(code);
+                        };
+                        reader.readAsText(item.value);
+                    } else {
+                        // Binary file info
+                        const div = document.createElement('div');
+                        div.className = 'binary-preview';
+                        div.textContent = `Binary file: ${item.value.type} (${formatFileSize(item.value.size)})`;
+                        previewContent.appendChild(div);
+                    }
+                } else if (item.value instanceof ArrayBuffer) {
+                    // ArrayBuffer info
+                    const div = document.createElement('div');
+                    div.className = 'binary-preview';
+                    div.textContent = `ArrayBuffer: ${formatFileSize(item.value.byteLength)}`;
+                    previewContent.appendChild(div);
+                } else if (typeof item.value === 'object' && item.value !== null) {
+                    // JSON data
+                    try {
+                        const pre = document.createElement('pre');
+                        const code = document.createElement('code');
+                        code.textContent = JSON.stringify(item.value, null, 2);
+                        pre.appendChild(code);
+                        previewContent.appendChild(pre);
+                        hljs.highlightElement(code);
+                    } catch (e) {
+                        previewContent.textContent = `[Unable to display value: ${e.message}]`;
+                    }
+                } else {
+                    // Primitive value
+                    previewContent.textContent = String(item.value);
+                }
                 
                 // Update breadcrumb if we're not already showing the item level
                 if (!breadcrumb.lastChild.dataset.path || 
@@ -1014,6 +1219,63 @@
                     });
                     
                     updateBreadcrumb(breadcrumbItems);
+                }
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            function deleteItem(item) {
+                if (!confirm(`Are you sure you want to delete "${extractFilename(item.key)}"?`)) {
+                    return;
+                }
+                
+                updateStatus(`Deleting item: ${extractFilename(item.key)}`);
+                
+                const request = indexedDB.open(state.currentDb);
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const transaction = db.transaction(item.storeName, 'readwrite');
+                    const store = transaction.objectStore(item.storeName);
+                    const deleteRequest = store.delete(item.key);
+                    
+                    deleteRequest.onsuccess = () => {
+                        updateStatus(`Item "${extractFilename(item.key)}" deleted`);
+                        // Refresh the current view
+                        if (state.currentStore) {
+                            if (state.currentStore.includes('/')) {
+                                openPathAsFolder(state.currentStore.split('/').slice(0, -1).join('/'));
+                            } else {
+                                openObjectStore(state.currentStore);
+                            }
+                        }
+                    };
+                    
+                    deleteRequest.onerror = (event) => {
+                        updateStatus(`Error deleting item: ${event.target.error}`, true);
+                        console.error('Error deleting item:', event.target.error);
+                    };
+                    
+                    transaction.oncomplete = () => {
+                        db.close();
+                    };
+                };
+                
+                request.onerror = (event) => {
+                    updateStatus(`Error opening database: ${event.target.error}`, true);
+                    console.error('Error opening database:', event.target.error);
+                };
+            }
+
+            function deleteCurrentItem() {
+                if (state.currentItem) {
+                    deleteItem(state.currentItem);
                 }
             }
 
@@ -1066,6 +1328,64 @@
                 };
             }
 
+            function handleFileUpload(event) {
+                const files = event.target.files;
+                if (!files || files.length === 0) return;
+                
+                updateStatus(`Uploading ${files.length} file(s) to ${state.currentStore}`);
+                
+                const request = indexedDB.open(state.currentDb);
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const transaction = db.transaction(state.currentStore, 'readwrite');
+                    const store = transaction.objectStore(state.currentStore);
+                    
+                    let filesProcessed = 0;
+                    
+                    Array.from(files).forEach(file => {
+                        const reader = new FileReader();
+                        
+                        reader.onload = (e) => {
+                            // Use the filename as the key
+                            const putRequest = store.put(file, file.name);
+                            
+                            putRequest.onsuccess = () => {
+                                filesProcessed++;
+                                if (filesProcessed === files.length) {
+                                    updateStatus(`Successfully uploaded ${files.length} file(s)`);
+                                    // Refresh the current view
+                                    if (state.currentStore.includes('/')) {
+                                        openPathAsFolder(state.currentStore.split('/').slice(0, -1).join('/'));
+                                    } else {
+                                        openObjectStore(state.currentStore);
+                                    }
+                                }
+                            };
+                            
+                            putRequest.onerror = (event) => {
+                                updateStatus(`Error uploading file ${file.name}: ${event.target.error}`, true);
+                                console.error('Error uploading file:', event.target.error);
+                            };
+                        };
+                        
+                        reader.readAsArrayBuffer(file);
+                    });
+                    
+                    transaction.oncomplete = () => {
+                        db.close();
+                    };
+                };
+                
+                request.onerror = (event) => {
+                    updateStatus(`Error opening database: ${event.target.error}`, true);
+                    console.error('Error opening database:', event.target.error);
+                };
+                
+                // Reset the file input
+                event.target.value = '';
+            }
+
             function updateBreadcrumb(items) {
                 breadcrumb.innerHTML = '';
                 
@@ -1105,6 +1425,7 @@
                         state.currentDb = null;
                         state.currentStore = null;
                         state.currentItem = null;
+                        deleteItemBtn.style.display = 'none';
                         
                         // Clear active states
                         document.querySelectorAll('.database-item').forEach(item => item.classList.remove('active'));
