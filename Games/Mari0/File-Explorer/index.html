@@ -774,14 +774,17 @@
                 
                 // Add files
                 files.forEach(file => {
+                    const displayName = extractFilename(file.key);
+                    const fileType = getFileTypeInfo(file);
+                    
                     const item = document.createElement('li');
                     item.className = 'item-card';
                     item.dataset.key = JSON.stringify(file.key);
                     item.dataset.storeName = file.storeName;
                     item.innerHTML = `
                         <div class="item-icon material-icons">insert_drive_file</div>
-                        <div class="item-name">${formatKey(file.key)}</div>
-                        <div class="item-meta">File</div>
+                        <div class="item-name">${displayName}</div>
+                        <div class="item-meta">${fileType}</div>
                     `;
                     
                     item.addEventListener('click', () => previewItem(file));
@@ -884,74 +887,18 @@
                 };
             }
 
-    function renderStoreItems(items) {
-        mainContent.innerHTML = '';
-        
-        if (items.length === 0) {
-            mainContent.innerHTML = `
-                <div class="empty-state">
-                    <span class="material-icons empty-icon">info</span>
-                    <div>No items found in this object store</div>
-                </div>
-            `;
-            return;
-        }
-        
-        const header = document.createElement('div');
-        header.className = 'content-header';
-        header.innerHTML = `
-            <div class="content-title">Items in ${state.currentStore}</div>
-            <div class="content-actions">
-                <button class="action-btn delete" id="delete-store-btn">
-                    <span class="material-icons">delete</span>
-                    Delete Store
-                </button>
-            </div>
-        `;
-        mainContent.appendChild(header);
-        
-        // Add event listener for delete store button
-        document.getElementById('delete-store-btn').addEventListener('click', deleteCurrentStore);
-        
-        const list = document.createElement('ul');
-        list.className = 'item-list';
-        
-        items.forEach(item => {
-            // Extract the filename from the key if it's a path
-            let displayName = formatKey(item.key);
-            if (typeof item.key === 'string' && item.key.includes('/')) {
-                const parts = item.key.split('/');
-                displayName = parts[parts.length - 1]; // Get the last part as filename
-            }
-            
-            const itemCard = document.createElement('li');
-            itemCard.className = 'item-card';
-            itemCard.dataset.itemKey = JSON.stringify(item.key);
-            itemCard.dataset.storeName = item.storeName;
-            itemCard.innerHTML = `
-                <div class="item-icon material-icons">insert_drive_file</div>
-                <div class="item-name">${displayName}</div>
-                <div class="item-meta">${getFileTypeInfo(item)}</div>
-            `;
-            
-            itemCard.addEventListener('click', () => previewItem(item));
-            list.appendChild(itemCard);
-        });
-        
-        mainContent.appendChild(list);
-    }
-
-    function getFileTypeInfo(item) {
-        if (typeof item.key === 'string' && item.key.includes('/')) {
-            const parts = item.key.split('/');
-            const filename = parts[parts.length - 1];
-            const extension = filename.includes('.') 
-                ? filename.split('.').pop().toUpperCase() 
-                : 'FILE';
-            return `${extension} file | ${typeof item.value}`;
-        }
-        return `Key: ${typeof item.key} | Value: ${typeof item.value}`;
-    }
+            function renderStoreItems(items) {
+                mainContent.innerHTML = '';
+                
+                if (items.length === 0) {
+                    mainContent.innerHTML = `
+                        <div class="empty-state">
+                            <span class="material-icons empty-icon">info</span>
+                            <div>No items found in this object store</div>
+                        </div>
+                    `;
+                    return;
+                }
                 
                 const header = document.createElement('div');
                 header.className = 'content-header';
@@ -973,14 +920,17 @@
                 list.className = 'item-list';
                 
                 items.forEach(item => {
+                    const displayName = extractFilename(item.key);
+                    const fileType = getFileTypeInfo(item);
+                    
                     const itemCard = document.createElement('li');
                     itemCard.className = 'item-card';
                     itemCard.dataset.itemKey = JSON.stringify(item.key);
                     itemCard.dataset.storeName = item.storeName;
                     itemCard.innerHTML = `
-                        <div class="item-icon material-icons">description</div>
-                        <div class="item-name">${formatKey(item.key)}</div>
-                        <div class="item-meta">Key: ${typeof item.key}</div>
+                        <div class="item-icon material-icons">insert_drive_file</div>
+                        <div class="item-name">${displayName}</div>
+                        <div class="item-meta">${fileType}</div>
                     `;
                     
                     itemCard.addEventListener('click', () => previewItem(item));
@@ -988,6 +938,25 @@
                 });
                 
                 mainContent.appendChild(list);
+            }
+
+            function extractFilename(key) {
+                if (typeof key === 'string' && key.includes('/')) {
+                    const parts = key.split('/');
+                    return parts[parts.length - 1]; // Return the last segment as filename
+                }
+                return formatKey(key);
+            }
+
+            function getFileTypeInfo(item) {
+                if (typeof item.key === 'string' && item.key.includes('/')) {
+                    const filename = extractFilename(item.key);
+                    const extension = filename.includes('.') 
+                        ? filename.split('.').pop().toUpperCase() 
+                        : 'FILE';
+                    return `${extension} file | ${typeof item.value}`;
+                }
+                return `Key: ${typeof item.key} | Value: ${typeof item.value}`;
             }
 
             function previewItem(item) {
@@ -1040,8 +1009,8 @@
                     // Add the item itself
                     breadcrumbItems.push({
                         type: 'item',
-                        name: formatKey(item.key),
-                        icon: 'description'
+                        name: extractFilename(item.key),
+                        icon: 'insert_drive_file'
                     });
                     
                     updateBreadcrumb(breadcrumbItems);
