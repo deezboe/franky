@@ -103,30 +103,6 @@
             font-weight: 500;
         }
 
-        .store-list {
-            list-style: none;
-            margin-left: 24px;
-            margin-top: 4px;
-        }
-
-        .store-item {
-            padding: 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .store-item:hover {
-            background-color: rgba(98, 0, 238, 0.08);
-        }
-
-        .store-item.active {
-            background-color: rgba(98, 0, 238, 0.12);
-            font-weight: 500;
-        }
-
         /* Breadcrumb Styles */
         .breadcrumb {
             grid-area: breadcrumb;
@@ -312,6 +288,38 @@
             background: transparent !important;
             padding: 0 !important;
         }
+
+        /* Tree view styles */
+        .tree-view {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        .tree-item {
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .tree-item:hover {
+            background-color: rgba(98, 0, 238, 0.08);
+        }
+
+        .tree-item-icon {
+            margin-right: 8px;
+            color: var(--primary-color);
+        }
+
+        .tree-item-name {
+            flex-grow: 1;
+        }
+
+        .tree-item-meta {
+            font-size: 0.8rem;
+            color: #757575;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body>
@@ -368,7 +376,8 @@
                 currentDb: null,
                 currentStore: null,
                 currentItem: null,
-                databases: []
+                databases: [],
+                pathStructure: {} // To store the hierarchical structure of paths
             };
 
             // DOM elements
@@ -432,6 +441,7 @@
                 state.currentDb = dbName;
                 state.currentStore = null;
                 state.currentItem = null;
+                state.pathStructure = {};
                 
                 // Update active state in sidebar
                 document.querySelectorAll('.database-item').forEach(item => {
@@ -452,7 +462,16 @@
                     const storeNames = Array.from(db.objectStoreNames);
                     db.close();
                     
-                    renderObjectStores(storeNames);
+                    // Build path structure for this database
+                    buildPathStructure(dbName, storeNames);
+                    
+                    // Render either the tree view or flat view depending on path structure
+                    if (hasNestedPaths()) {
+                        renderTreeView();
+                    } else {
+                        renderObjectStores(storeNames);
+                    }
+                    
                     updateStatus(`Database opened: ${dbName} (${storeNames.length} object stores)`);
                 };
                 
@@ -460,6 +479,316 @@
                     updateStatus(`Error opening database: ${event.target.error}`, true);
                     console.error('Error opening database:', event.target.error);
                 };
+            }
+
+            function buildPathStructure(dbName, storeNames) {
+                state.pathStructure = {};
+                
+                storeNames.forEach(storeName => {
+                    // Split the store name by slashes to handle path-like structures
+                    const parts = storeName.split('/');
+                    let currentLevel = state.pathStructure;
+                    
+                    for (let i = 0; i < parts.length; i++) {
+                        const part = parts[i];
+                        const isFile = i === parts.length - 1 && parts.length > 1;
+                        
+                        if (!currentLevel[part]) {
+                            currentLevel[part] = {
+                                name: part,
+                                type: isFile ? 'file' : 'folder',
+                                children: {},
+                                fullPath: parts.slice(0, i + 1).join('/'),
+                                isFile: isFile
+                            };
+                        }
+                        
+                        if (!isFile) {
+                            currentLevel = currentLevel[part].children;
+                        }
+                    }
+                });
+            }
+
+            function hasNestedPaths() {
+                return Object.values(state.pathStructure).some(item => 
+                    Object.keys(item.children).length > 0 || item.isFile
+                );
+            }
+
+            function renderTreeView() {
+                mainContent.innerHTML = '';
+                
+                const header = document.createElement('div');
+                header.className = 'content-header';
+                header.innerHTML = `
+                    <div class="content-title">${state.currentDb}</div>
+                `;
+                mainContent.appendChild(header);
+                
+                const treeContainer = document.createElement('ul');
+                treeContainer.className = 'tree-view';
+                
+                // Recursively render tree items
+                renderTreeItems(treeContainer, state.pathStructure);
+                
+                mainContent.appendChild(treeContainer);
+            }
+
+            function renderTreeItems(container, items) {
+                Object.values(items).forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'tree-item';
+                    li.dataset.path = item.fullPath;
+                    li.dataset.isFile = item.isFile;
+                    
+                    const icon = document.createElement('span');
+                    icon.className = 'tree-item-icon material-icons';
+                    icon.textContent = item.isFile ? 'insert_drive_file' : 'folder';
+                    
+                    const name = document.createElement('span');
+                    name.className = 'tree-item-name';
+                    name.textContent = item.name;
+                    
+                    li.appendChild(icon);
+                    li.appendChild(name);
+                    
+                    if (item.isFile) {
+                        const meta = document.createElement('span');
+                        meta.className = 'tree-item-meta';
+                        meta.textContent = 'File';
+                        li.appendChild(meta);
+                    }
+                    
+                    li.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (item.isFile) {
+                            openPathAsFile(item.fullPath);
+                        } else {
+                            openPathAsFolder(item.fullPath);
+                        }
+                    });
+                    
+                    container.appendChild(li);
+                    
+                    if (Object.keys(item.children).length > 0) {
+                        const childContainer = document.createElement('ul');
+                        childContainer.className = 'tree-view';
+                        renderTreeItems(childContainer, item.children);
+                        container.appendChild(childContainer);
+                    }
+                });
+            }
+
+            function openPathAsFolder(path) {
+                state.currentStore = path;
+                state.currentItem = null;
+                
+                // Update breadcrumb
+                const pathParts = path.split('/');
+                const breadcrumbItems = [
+                    { type: 'root', name: 'Home', icon: 'home' },
+                    { type: 'db', name: state.currentDb, icon: 'storage' }
+                ];
+                
+                // Add each part of the path to breadcrumb
+                let currentPath = '';
+                pathParts.forEach((part, index) => {
+                    currentPath = currentPath ? `${currentPath}/${part}` : part;
+                    breadcrumbItems.push({
+                        type: index === pathParts.length - 1 ? 'store' : 'folder',
+                        name: part,
+                        icon: index === pathParts.length - 1 ? 'folder' : 'folder',
+                        path: currentPath
+                    });
+                });
+                
+                updateBreadcrumb(breadcrumbItems);
+                
+                // Get all items that start with this path
+                const request = indexedDB.open(state.currentDb);
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const items = [];
+                    
+                    // Get all stores that start with this path
+                    const storeNames = Array.from(db.objectStoreNames).filter(name => 
+                        name.startsWith(path + '/') || name === path
+                    );
+                    
+                    // For each store, get its items
+                    const promises = storeNames.map(storeName => {
+                        return new Promise((resolve) => {
+                            const transaction = db.transaction(storeName, 'readonly');
+                            const store = transaction.objectStore(storeName);
+                            const cursorRequest = store.openCursor();
+                            const storeItems = [];
+                            
+                            cursorRequest.onsuccess = (event) => {
+                                const cursor = event.target.result;
+                                if (cursor) {
+                                    storeItems.push({
+                                        key: cursor.key,
+                                        value: cursor.value,
+                                        storeName: storeName
+                                    });
+                                    cursor.continue();
+                                } else {
+                                    resolve(storeItems);
+                                }
+                            };
+                            
+                            cursorRequest.onerror = () => resolve([]);
+                        });
+                    });
+                    
+                    Promise.all(promises).then(results => {
+                        db.close();
+                        const allItems = results.flat();
+                        
+                        // Group by the next level of the path
+                        const pathLevels = {};
+                        const fileItems = [];
+                        
+                        allItems.forEach(item => {
+                            const remainingPath = item.storeName.substring(path.length + 1);
+                            const nextSlash = remainingPath.indexOf('/');
+                            
+                            if (nextSlash === -1) {
+                                // It's a file in this directory
+                                fileItems.push(item);
+                            } else {
+                                // It's a subdirectory
+                                const folderName = remainingPath.substring(0, nextSlash);
+                                if (!pathLevels[folderName]) {
+                                    pathLevels[folderName] = {
+                                        type: 'folder',
+                                        name: folderName,
+                                        path: path ? `${path}/${folderName}` : folderName
+                                    };
+                                }
+                            }
+                        });
+                        
+                        // Render the contents
+                        renderPathContents(Object.values(pathLevels), fileItems);
+                        updateStatus(`Showing contents of ${path}`);
+                    });
+                };
+            }
+
+            function openPathAsFile(path) {
+                state.currentStore = path;
+                
+                // Open the store and get its items
+                const request = indexedDB.open(state.currentDb);
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const transaction = db.transaction(path, 'readonly');
+                    const store = transaction.objectStore(path);
+                    const items = [];
+                    
+                    const cursorRequest = store.openCursor();
+                    
+                    cursorRequest.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            items.push({
+                                key: cursor.key,
+                                value: cursor.value,
+                                storeName: path
+                            });
+                            cursor.continue();
+                        } else {
+                            db.close();
+                            if (items.length > 0) {
+                                // For files, we'll just preview the first item
+                                previewItem(items[0]);
+                                
+                                // Update breadcrumb
+                                const pathParts = path.split('/');
+                                const breadcrumbItems = [
+                                    { type: 'root', name: 'Home', icon: 'home' },
+                                    { type: 'db', name: state.currentDb, icon: 'storage' }
+                                ];
+                                
+                                // Add each part of the path to breadcrumb
+                                let currentPath = '';
+                                pathParts.forEach((part, index) => {
+                                    currentPath = currentPath ? `${currentPath}/${part}` : part;
+                                    breadcrumbItems.push({
+                                        type: index === pathParts.length - 1 ? 'file' : 'folder',
+                                        name: part,
+                                        icon: index === pathParts.length - 1 ? 'insert_drive_file' : 'folder',
+                                        path: currentPath
+                                    });
+                                });
+                                
+                                updateBreadcrumb(breadcrumbItems);
+                                updateStatus(`Showing file: ${path}`);
+                            }
+                        }
+                    };
+                };
+            }
+
+            function renderPathContents(folders, files) {
+                mainContent.innerHTML = '';
+                
+                const header = document.createElement('div');
+                header.className = 'content-header';
+                header.innerHTML = `
+                    <div class="content-title">${state.currentStore || state.currentDb}</div>
+                `;
+                mainContent.appendChild(header);
+                
+                if (folders.length === 0 && files.length === 0) {
+                    mainContent.innerHTML += `
+                        <div class="empty-state">
+                            <span class="material-icons empty-icon">info</span>
+                            <div>No items found in this location</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const list = document.createElement('ul');
+                list.className = 'item-list';
+                
+                // Add folders first
+                folders.forEach(folder => {
+                    const item = document.createElement('li');
+                    item.className = 'item-card';
+                    item.dataset.path = folder.path;
+                    item.innerHTML = `
+                        <div class="item-icon material-icons">folder</div>
+                        <div class="item-name">${folder.name}</div>
+                        <div class="item-meta">Folder</div>
+                    `;
+                    
+                    item.addEventListener('click', () => openPathAsFolder(folder.path));
+                    list.appendChild(item);
+                });
+                
+                // Add files
+                files.forEach(file => {
+                    const item = document.createElement('li');
+                    item.className = 'item-card';
+                    item.dataset.key = JSON.stringify(file.key);
+                    item.dataset.storeName = file.storeName;
+                    item.innerHTML = `
+                        <div class="item-icon material-icons">insert_drive_file</div>
+                        <div class="item-name">${formatKey(file.key)}</div>
+                        <div class="item-meta">File</div>
+                    `;
+                    
+                    item.addEventListener('click', () => previewItem(file));
+                    list.appendChild(item);
+                });
+                
+                mainContent.appendChild(list);
             }
 
             function renderObjectStores(storeNames) {
@@ -531,7 +860,8 @@
                         if (cursor) {
                             items.push({
                                 key: cursor.key,
-                                value: cursor.value
+                                value: cursor.value,
+                                storeName: storeName
                             });
                             cursor.continue();
                         } else {
@@ -590,6 +920,7 @@
                     const itemCard = document.createElement('li');
                     itemCard.className = 'item-card';
                     itemCard.dataset.itemKey = JSON.stringify(item.key);
+                    itemCard.dataset.storeName = item.storeName;
                     itemCard.innerHTML = `
                         <div class="item-icon material-icons">description</div>
                         <div class="item-name">${formatKey(item.key)}</div>
@@ -608,7 +939,10 @@
                 
                 // Highlight the selected item
                 document.querySelectorAll('.item-card').forEach(card => {
-                    card.classList.toggle('active', card.dataset.itemKey === JSON.stringify(item.key));
+                    card.classList.toggle('active', 
+                        card.dataset.itemKey === JSON.stringify(item.key) && 
+                        card.dataset.storeName === item.storeName
+                    );
                 });
                 
                 // Display the item in the preview pane
@@ -627,13 +961,34 @@
                 hljs.highlightElement(previewContent.querySelector('code'));
                 
                 // Update breadcrumb if we're not already showing the item level
-                if (breadcrumb.lastChild.dataset.type !== 'item') {
-                    updateBreadcrumb([
+                if (!breadcrumb.lastChild.dataset.path || 
+                    breadcrumb.lastChild.dataset.path !== item.storeName) {
+                    const pathParts = item.storeName.split('/');
+                    const breadcrumbItems = [
                         { type: 'root', name: 'Home', icon: 'home' },
-                        { type: 'db', name: state.currentDb, icon: 'storage' },
-                        { type: 'store', name: state.currentStore, icon: 'folder' },
-                        { type: 'item', name: formatKey(item.key), icon: 'description' }
-                    ]);
+                        { type: 'db', name: state.currentDb, icon: 'storage' }
+                    ];
+                    
+                    // Add each part of the path to breadcrumb
+                    let currentPath = '';
+                    pathParts.forEach((part, index) => {
+                        currentPath = currentPath ? `${currentPath}/${part}` : part;
+                        breadcrumbItems.push({
+                            type: index === pathParts.length - 1 ? 'store' : 'folder',
+                            name: part,
+                            icon: index === pathParts.length - 1 ? 'folder' : 'folder',
+                            path: currentPath
+                        });
+                    });
+                    
+                    // Add the item itself
+                    breadcrumbItems.push({
+                        type: 'item',
+                        name: formatKey(item.key),
+                        icon: 'description'
+                    });
+                    
+                    updateBreadcrumb(breadcrumbItems);
                 }
             }
 
@@ -697,15 +1052,16 @@
                     crumb.dataset.type = item.type;
                     
                     if (item.type === 'db') crumb.dataset.dbName = item.name;
-                    if (item.type === 'store') crumb.dataset.storeName = item.name;
-                    if (item.type === 'item') crumb.dataset.itemKey = state.currentItem ? JSON.stringify(state.currentItem.key) : '';
+                    if (item.type === 'store' || item.type === 'folder' || item.type === 'file') {
+                        crumb.dataset.path = item.path;
+                    }
                     
                     crumb.innerHTML = `
                         <span class="material-icons">${item.icon}</span>
                         ${item.name}
                     `;
                     
-                    crumb.addEventListener('click', () => navigateFromBreadcrumb(item.type, index));
+                    crumb.addEventListener('click', () => navigateFromBreadcrumb(item, index));
                     breadcrumb.appendChild(crumb);
                     
                     if (!isLast) {
@@ -717,8 +1073,8 @@
                 });
             }
 
-            function navigateFromBreadcrumb(type, index) {
-                switch (type) {
+            function navigateFromBreadcrumb(item, index) {
+                switch (item.type) {
                     case 'root':
                         // Reset to initial state
                         state.currentDb = null;
@@ -746,9 +1102,15 @@
                         openDatabase(state.currentDb, state.databases.find(db => db.name === state.currentDb).version);
                         break;
                         
+                    case 'folder':
                     case 'store':
-                        // Go back to store view
-                        openObjectStore(state.currentStore);
+                        // Go back to this folder/store
+                        openPathAsFolder(item.path);
+                        break;
+                        
+                    case 'file':
+                        // Go back to this file
+                        openPathAsFile(item.path);
                         break;
                         
                     case 'item':
