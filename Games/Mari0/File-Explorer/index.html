@@ -3,128 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IndexedDB File Explorer with Upload</title>
+    <title>IndexedDB Explorer</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #6200ee;
+            --primary-light: #9e47ff;
+            --primary-dark: #0400ba;
+            --secondary-color: #03dac6;
+            --background: #f5f5f5;
+            --surface: #ffffff;
+            --error: #b00020;
+            --on-primary: #ffffff;
+            --on-secondary: #000000;
+            --on-background: #000000;
+            --on-surface: #000000;
+            --on-error: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background);
+            color: var(--on-background);
+            display: grid;
+            grid-template-areas:
+                "sidebar breadcrumb breadcrumb"
+                "sidebar main preview"
+                "sidebar status preview";
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 50px 1fr 150px;
+            height: 100vh;
+            overflow: hidden;
         }
-        
-        .explorer-container {
-            display: flex;
-            gap: 20px;
-        }
-        
+
         /* Sidebar Styles */
         .sidebar {
-            width: 250px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
-            padding: 15px;
-            height: 600px;
+            grid-area: sidebar;
+            background-color: var(--surface);
+            border-right: 1px solid #e0e0e0;
             overflow-y: auto;
+            padding: 16px;
         }
-        
+
         .sidebar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ddd;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
         }
-        
+
+        .sidebar-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
         .refresh-btn {
             background: none;
             border: none;
             cursor: pointer;
-            color: #6200ee;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
-        
+
+        .refresh-btn:hover {
+            color: var(--primary-light);
+        }
+
         .database-list {
             list-style: none;
-            padding: 0;
         }
-        
+
         .database-item {
             padding: 8px;
             border-radius: 4px;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
             margin-bottom: 4px;
         }
-        
+
         .database-item:hover {
             background-color: rgba(98, 0, 238, 0.08);
         }
-        
+
         .database-item.active {
             background-color: rgba(98, 0, 238, 0.12);
             font-weight: 500;
         }
-        
+
+        /* Breadcrumb Styles */
+        .breadcrumb {
+            grid-area: breadcrumb;
+            background-color: var(--surface);
+            border-bottom: 1px solid #e0e0e0;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+        }
+
+        .breadcrumb-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .breadcrumb-item:hover {
+            background-color: rgba(98, 0, 238, 0.08);
+        }
+
+        .breadcrumb-separator {
+            color: #757575;
+        }
+
         /* Main Content Styles */
         .main-content {
-            flex: 1;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            height: 600px;
+            grid-area: main;
+            background-color: var(--surface);
             overflow-y: auto;
+            padding: 16px;
         }
-        
+
         .content-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ddd;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
         }
-        
-        .upload-area {
-            border: 2px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 20px;
+
+        .content-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .content-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
             cursor: pointer;
-            border-radius: 5px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
         }
-        
-        .upload-area:hover {
-            background-color: #f9f9f9;
+
+        .action-btn:hover {
+            background-color: rgba(98, 0, 238, 0.08);
         }
-        
+
+        .action-btn.delete {
+            color: var(--error);
+        }
+
+        .action-btn.delete:hover {
+            background-color: rgba(176, 0, 32, 0.08);
+        }
+
         .item-list {
             list-style: none;
-            padding: 0;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 12px;
         }
-        
+
         .item-card {
-            border: 1px solid #ddd;
+            border: 1px solid #e0e0e0;
             border-radius: 4px;
             padding: 12px;
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
         }
-        
+
         .item-card:hover {
-            border-color: #9e47ff;
+            border-color: var(--primary-light);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        
+
+        .item-card.active {
+            border-color: var(--primary-color);
+            background-color: rgba(98, 0, 238, 0.04);
+        }
+
         .item-icon {
             font-size: 36px;
-            color: #6200ee;
+            color: var(--primary-color);
             margin-bottom: 8px;
         }
-        
+
         .item-name {
             font-weight: 500;
             margin-bottom: 4px;
@@ -132,24 +223,24 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        
+
         .item-meta {
             font-size: 0.8rem;
             color: #757575;
         }
-        
+
         .item-actions {
             position: absolute;
             top: 8px;
             right: 8px;
             display: none;
         }
-        
+
         .item-card:hover .item-actions {
             display: flex;
             gap: 4px;
         }
-        
+
         .item-action-btn {
             background: rgba(255, 255, 255, 0.9);
             border: none;
@@ -162,72 +253,56 @@
             cursor: pointer;
             color: #555;
         }
-        
+
         .item-action-btn:hover {
-            background: #6200ee;
+            background: var(--primary-color);
             color: white;
         }
-        
+
         /* Preview Styles */
         .preview {
-            width: 300px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            height: 600px;
+            grid-area: preview;
+            background-color: var(--surface);
+            border-left: 1px solid #e0e0e0;
             overflow-y: auto;
+            padding: 16px;
         }
-        
+
         .preview-header {
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ddd;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        
+
+        .preview-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
         .preview-content {
             font-family: 'Courier New', monospace;
             font-size: 0.9rem;
             white-space: pre-wrap;
             word-break: break-all;
         }
-        
-        /* Status Bar */
+
+        /* Status Bar Styles */
         .status-bar {
-            margin-top: 10px;
-            padding: 8px;
+            grid-area: status;
+            background-color: var(--surface);
+            border-top: 1px solid #e0e0e0;
+            padding: 8px 16px;
             font-size: 0.8rem;
             color: #757575;
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
-        
-        /* Progress Bar */
-        .progress-bar {
-            height: 4px;
-            background-color: #f0f0f0;
-            margin-top: 10px;
-            border-radius: 2px;
-            overflow: hidden;
-        }
-        
-        .progress {
-            height: 100%;
-            background-color: #4CAF50;
-            width: 0%;
-            transition: width 0.3s;
-        }
-        
-        /* File preview styles */
-        .file-preview {
-            max-width: 100%;
-            max-height: 200px;
-            margin-top: 8px;
-        }
-        
-        .binary-preview {
-            color: #757575;
-            font-style: italic;
-        }
-        
-        /* Empty state */
+
+        /* Empty State Styles */
         .empty-state {
             display: flex;
             flex-direction: column;
@@ -237,58 +312,148 @@
             color: #757575;
             text-align: center;
         }
-        
+
         .empty-icon {
             font-size: 48px;
             margin-bottom: 16px;
         }
+
+        /* Highlight.js overrides */
+        .hljs {
+            background: transparent !important;
+            padding: 0 !important;
+        }
+
+        /* Tree view styles */
+        .tree-view {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        .tree-item {
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .tree-item:hover {
+            background-color: rgba(98, 0, 238, 0.08);
+        }
+
+        .tree-item-icon {
+            margin-right: 8px;
+            color: var(--primary-color);
+        }
+
+        .tree-item-name {
+            flex-grow: 1;
+        }
+
+        .tree-item-meta {
+            font-size: 0.8rem;
+            color: #757575;
+            margin-left: 8px;
+        }
+
+        /* Upload styles */
+        .upload-container {
+            margin-top: 16px;
+            border: 1px dashed #e0e0e0;
+            border-radius: 4px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .upload-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .upload-btn:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .upload-input {
+            display: none;
+        }
+
+        /* File preview styles */
+        .file-preview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 8px;
+        }
+
+        .binary-preview {
+            color: #757575;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
-    <h1>IndexedDB File Explorer with Upload</h1>
-    
-    <div class="explorer-container">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <h3>Databases</h3>
-                <button class="refresh-btn" id="refresh-btn" title="Refresh">
-                    <span class="material-icons">refresh</span>
-                </button>
-            </div>
-            <ul class="database-list" id="database-list">
-                <li class="database-item"><span class="material-icons">hourglass_empty</span>Loading...</li>
-            </ul>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">IndexedDB Explorer</div>
+            <button class="refresh-btn" id="refresh-btn">
+                <span class="material-icons">refresh</span>
+                Refresh
+            </button>
         </div>
-        
-        <!-- Main Content -->
-        <div class="main-content" id="main-content">
-            <div class="empty-state">
-                <span class="material-icons empty-icon">folder_open</span>
-                <div>Select a database or object store to view contents</div>
-            </div>
-        </div>
-        
-        <!-- Preview Pane -->
-        <div class="preview" id="preview">
-            <div class="preview-header">
-                <h3>Preview</h3>
-            </div>
-            <div class="preview-content" id="preview-content">
-                Select an item to preview its contents
-            </div>
-        </div>
-    </div>
-    
-    <!-- Hidden file input for uploads -->
-    <input type="file" id="file-upload" style="display: none;" multiple>
-    
-    <!-- Status Bar -->
-    <div class="status-bar" id="status-bar">Ready</div>
-    <div class="progress-bar" id="progressContainer" style="display: none;">
-        <div class="progress" id="progressBar"></div>
+        <ul class="database-list" id="database-list">
+            <!-- Databases will be populated here -->
+        </ul>
     </div>
 
+    <!-- Breadcrumb Navigation -->
+    <div class="breadcrumb" id="breadcrumb">
+        <div class="breadcrumb-item" data-type="root">
+            <span class="material-icons">home</span>
+            Home
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="main-content">
+        <div class="empty-state">
+            <span class="material-icons empty-icon">folder_open</span>
+            <div>Select a database or object store to view contents</div>
+        </div>
+    </div>
+
+    <!-- Preview Pane -->
+    <div class="preview" id="preview">
+        <div class="preview-header">
+            <div class="preview-title">Preview</div>
+            <div class="content-actions">
+                <button class="action-btn delete" id="delete-item-btn" style="display: none;">
+                    <span class="material-icons">delete</span>
+                    Delete Item
+                </button>
+            </div>
+        </div>
+        <div class="preview-content" id="preview-content">
+            Select an item to preview its contents
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="status-bar">
+        <div>Ready</div>
+    </div>
+
+    <!-- Hidden file input for uploads -->
+    <input type="file" id="file-upload" class="upload-input" multiple>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // State management
@@ -296,18 +461,19 @@
                 currentDb: null,
                 currentStore: null,
                 currentItem: null,
-                databases: []
+                databases: [],
+                pathStructure: {} // To store the hierarchical structure of paths
             };
 
             // DOM elements
             const databaseList = document.getElementById('database-list');
+            const breadcrumb = document.getElementById('breadcrumb');
             const mainContent = document.getElementById('main-content');
             const previewContent = document.getElementById('preview-content');
             const refreshBtn = document.getElementById('refresh-btn');
             const statusBar = document.getElementById('status-bar');
             const fileUpload = document.getElementById('file-upload');
-            const progressBar = document.getElementById('progressBar');
-            const progressContainer = document.getElementById('progressContainer');
+            const deleteItemBtn = document.getElementById('delete-item-btn');
 
             // Initialize the explorer
             refreshDatabases();
@@ -315,6 +481,7 @@
             // Event listeners
             refreshBtn.addEventListener('click', refreshDatabases);
             fileUpload.addEventListener('change', handleFileUpload);
+            deleteItemBtn.addEventListener('click', deleteCurrentItem);
 
             // Functions
             function refreshDatabases() {
@@ -363,11 +530,18 @@
                 state.currentDb = dbName;
                 state.currentStore = null;
                 state.currentItem = null;
+                state.pathStructure = {};
                 
                 // Update active state in sidebar
                 document.querySelectorAll('.database-item').forEach(item => {
                     item.classList.toggle('active', item.dataset.dbName === dbName);
                 });
+                
+                // Update breadcrumb
+                updateBreadcrumb([
+                    { type: 'root', name: 'Home', icon: 'home' },
+                    { type: 'db', name: dbName, icon: 'storage' }
+                ]);
                 
                 // Open the database to get object stores
                 const request = indexedDB.open(dbName, version);
@@ -377,7 +551,16 @@
                     const storeNames = Array.from(db.objectStoreNames);
                     db.close();
                     
-                    renderObjectStores(storeNames);
+                    // Build path structure for this database
+                    buildPathStructure(dbName, storeNames);
+                    
+                    // Render either the tree view or flat view depending on path structure
+                    if (hasNestedPaths()) {
+                        renderTreeView();
+                    } else {
+                        renderObjectStores(storeNames);
+                    }
+                    
                     updateStatus(`Database opened: ${dbName} (${storeNames.length} object stores)`);
                 };
                 
@@ -385,6 +568,347 @@
                     updateStatus(`Error opening database: ${event.target.error}`, true);
                     console.error('Error opening database:', event.target.error);
                 };
+            }
+
+            function buildPathStructure(dbName, storeNames) {
+                state.pathStructure = {};
+                
+                storeNames.forEach(storeName => {
+                    // Split the store name by slashes to handle path-like structures
+                    const parts = storeName.split('/');
+                    let currentLevel = state.pathStructure;
+                    
+                    for (let i = 0; i < parts.length; i++) {
+                        const part = parts[i];
+                        const isFile = i === parts.length - 1 && parts.length > 1;
+                        
+                        if (!currentLevel[part]) {
+                            currentLevel[part] = {
+                                name: part,
+                                type: isFile ? 'file' : 'folder',
+                                children: {},
+                                fullPath: parts.slice(0, i + 1).join('/'),
+                                isFile: isFile
+                            };
+                        }
+                        
+                        if (!isFile) {
+                            currentLevel = currentLevel[part].children;
+                        }
+                    }
+                });
+            }
+
+            function hasNestedPaths() {
+                return Object.values(state.pathStructure).some(item => 
+                    Object.keys(item.children).length > 0 || item.isFile
+                );
+            }
+
+            function renderTreeView() {
+                mainContent.innerHTML = '';
+                
+                const header = document.createElement('div');
+                header.className = 'content-header';
+                header.innerHTML = `
+                    <div class="content-title">${state.currentDb}</div>
+                `;
+                mainContent.appendChild(header);
+                
+                const treeContainer = document.createElement('ul');
+                treeContainer.className = 'tree-view';
+                
+                // Recursively render tree items
+                renderTreeItems(treeContainer, state.pathStructure);
+                
+                mainContent.appendChild(treeContainer);
+            }
+
+            function renderTreeItems(container, items) {
+                Object.values(items).forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'tree-item';
+                    li.dataset.path = item.fullPath;
+                    li.dataset.isFile = item.isFile;
+                    
+                    const icon = document.createElement('span');
+                    icon.className = 'tree-item-icon material-icons';
+                    icon.textContent = item.isFile ? 'insert_drive_file' : 'folder';
+                    
+                    const name = document.createElement('span');
+                    name.className = 'tree-item-name';
+                    name.textContent = item.name;
+                    
+                    li.appendChild(icon);
+                    li.appendChild(name);
+                    
+                    if (item.isFile) {
+                        const meta = document.createElement('span');
+                        meta.className = 'tree-item-meta';
+                        meta.textContent = 'File';
+                        li.appendChild(meta);
+                    }
+                    
+                    li.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (item.isFile) {
+                            openPathAsFile(item.fullPath);
+                        } else {
+                            openPathAsFolder(item.fullPath);
+                        }
+                    });
+                    
+                    container.appendChild(li);
+                    
+                    if (Object.keys(item.children).length > 0) {
+                        const childContainer = document.createElement('ul');
+                        childContainer.className = 'tree-view';
+                        renderTreeItems(childContainer, item.children);
+                        container.appendChild(childContainer);
+                    }
+                });
+            }
+
+            function openPathAsFolder(path) {
+                state.currentStore = path;
+                state.currentItem = null;
+                
+                // Update breadcrumb
+                const pathParts = path.split('/');
+                const breadcrumbItems = [
+                    { type: 'root', name: 'Home', icon: 'home' },
+                    { type: 'db', name: state.currentDb, icon: 'storage' }
+                ];
+                
+                // Add each part of the path to breadcrumb
+                let currentPath = '';
+                pathParts.forEach((part, index) => {
+                    currentPath = currentPath ? `${currentPath}/${part}` : part;
+                    breadcrumbItems.push({
+                        type: index === pathParts.length - 1 ? 'store' : 'folder',
+                        name: part,
+                        icon: index === pathParts.length - 1 ? 'folder' : 'folder',
+                        path: currentPath
+                    });
+                });
+                
+                updateBreadcrumb(breadcrumbItems);
+                
+                // Get all items that start with this path
+                const request = indexedDB.open(state.currentDb);
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const items = [];
+                    
+                    // Get all stores that start with this path
+                    const storeNames = Array.from(db.objectStoreNames).filter(name => 
+                        name.startsWith(path + '/') || name === path
+                    );
+                    
+                    // For each store, get its items
+                    const promises = storeNames.map(storeName => {
+                        return new Promise((resolve) => {
+                            const transaction = db.transaction(storeName, 'readonly');
+                            const store = transaction.objectStore(storeName);
+                            const cursorRequest = store.openCursor();
+                            const storeItems = [];
+                            
+                            cursorRequest.onsuccess = (event) => {
+                                const cursor = event.target.result;
+                                if (cursor) {
+                                    storeItems.push({
+                                        key: cursor.key,
+                                        value: cursor.value,
+                                        storeName: storeName
+                                    });
+                                    cursor.continue();
+                                } else {
+                                    resolve(storeItems);
+                                }
+                            };
+                            
+                            cursorRequest.onerror = () => resolve([]);
+                        });
+                    });
+                    
+                    Promise.all(promises).then(results => {
+                        db.close();
+                        const allItems = results.flat();
+                        
+                        // Group by the next level of the path
+                        const pathLevels = {};
+                        const fileItems = [];
+                        
+                        allItems.forEach(item => {
+                            const remainingPath = item.storeName.substring(path.length + 1);
+                            const nextSlash = remainingPath.indexOf('/');
+                            
+                            if (nextSlash === -1) {
+                                // It's a file in this directory
+                                fileItems.push(item);
+                            } else {
+                                // It's a subdirectory
+                                const folderName = remainingPath.substring(0, nextSlash);
+                                if (!pathLevels[folderName]) {
+                                    pathLevels[folderName] = {
+                                        type: 'folder',
+                                        name: folderName,
+                                        path: path ? `${path}/${folderName}` : folderName
+                                    };
+                                }
+                            }
+                        });
+                        
+                        // Render the contents
+                        renderPathContents(Object.values(pathLevels), fileItems);
+                        updateStatus(`Showing contents of ${path}`);
+                    });
+                };
+            }
+
+            function openPathAsFile(path) {
+                state.currentStore = path;
+                
+                // Open the store and get its items
+                const request = indexedDB.open(state.currentDb);
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const transaction = db.transaction(path, 'readonly');
+                    const store = transaction.objectStore(path);
+                    const items = [];
+                    
+                    const cursorRequest = store.openCursor();
+                    
+                    cursorRequest.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            items.push({
+                                key: cursor.key,
+                                value: cursor.value,
+                                storeName: path
+                            });
+                            cursor.continue();
+                        } else {
+                            db.close();
+                            if (items.length > 0) {
+                                // For files, we'll just preview the first item
+                                previewItem(items[0]);
+                                
+                                // Update breadcrumb
+                                const pathParts = path.split('/');
+                                const breadcrumbItems = [
+                                    { type: 'root', name: 'Home', icon: 'home' },
+                                    { type: 'db', name: state.currentDb, icon: 'storage' }
+                                ];
+                                
+                                // Add each part of the path to breadcrumb
+                                let currentPath = '';
+                                pathParts.forEach((part, index) => {
+                                    currentPath = currentPath ? `${currentPath}/${part}` : part;
+                                    breadcrumbItems.push({
+                                        type: index === pathParts.length - 1 ? 'file' : 'folder',
+                                        name: part,
+                                        icon: index === pathParts.length - 1 ? 'insert_drive_file' : 'folder',
+                                        path: currentPath
+                                    });
+                                });
+                                
+                                updateBreadcrumb(breadcrumbItems);
+                                updateStatus(`Showing file: ${path}`);
+                            }
+                        }
+                    };
+                };
+            }
+
+            function renderPathContents(folders, files) {
+                mainContent.innerHTML = '';
+                
+                const header = document.createElement('div');
+                header.className = 'content-header';
+                header.innerHTML = `
+                    <div class="content-title">${state.currentStore || state.currentDb}</div>
+                    <div class="content-actions">
+                        <button class="action-btn" id="upload-files-btn">
+                            <span class="material-icons">upload</span>
+                            Upload Files
+                        </button>
+                    </div>
+                `;
+                mainContent.appendChild(header);
+                
+                // Add event listener for upload button
+                document.getElementById('upload-files-btn').addEventListener('click', () => {
+                    fileUpload.click();
+                });
+                
+                if (folders.length === 0 && files.length === 0) {
+                    mainContent.innerHTML += `
+                        <div class="empty-state">
+                            <span class="material-icons empty-icon">info</span>
+                            <div>No items found in this location</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const list = document.createElement('ul');
+                list.className = 'item-list';
+                
+                // Add folders first
+                folders.forEach(folder => {
+                    const item = document.createElement('li');
+                    item.className = 'item-card';
+                    item.dataset.path = folder.path;
+                    item.innerHTML = `
+                        <div class="item-icon material-icons">folder</div>
+                        <div class="item-name">${folder.name}</div>
+                        <div class="item-meta">Folder</div>
+                    `;
+                    
+                    item.addEventListener('click', () => openPathAsFolder(folder.path));
+                    list.appendChild(item);
+                });
+                
+                // Add files
+                files.forEach(file => {
+                    const displayName = extractFilename(file.key);
+                    const fileType = getFileTypeInfo(file);
+                    
+                    const itemCard = document.createElement('li');
+                    itemCard.className = 'item-card';
+                    itemCard.dataset.itemKey = JSON.stringify(file.key);
+                    itemCard.dataset.storeName = file.storeName;
+                    itemCard.innerHTML = `
+                        <div class="item-icon material-icons">insert_drive_file</div>
+                        <div class="item-name">${displayName}</div>
+                        <div class="item-meta">${fileType}</div>
+                        <div class="item-actions">
+                            <button class="item-action-btn delete-item" title="Delete">
+                                <span class="material-icons" style="font-size: 16px;">delete</span>
+                            </button>
+                        </div>
+                    `;
+                    
+                    itemCard.addEventListener('click', (e) => {
+                        // Only preview if not clicking on action buttons
+                        if (!e.target.closest('.item-action-btn')) {
+                            previewItem(file);
+                        }
+                    });
+                    
+                    // Add delete handler
+                    itemCard.querySelector('.delete-item').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteItem(file);
+                    });
+                    
+                    list.appendChild(itemCard);
+                });
+                
+                mainContent.appendChild(list);
             }
 
             function renderObjectStores(storeNames) {
@@ -431,6 +955,13 @@
                 updateStatus(`Loading items from: ${storeName}`);
                 state.currentStore = storeName;
                 state.currentItem = null;
+                
+                // Update breadcrumb
+                updateBreadcrumb([
+                    { type: 'root', name: 'Home', icon: 'home' },
+                    { type: 'db', name: state.currentDb, icon: 'storage' },
+                    { type: 'store', name: storeName, icon: 'folder' }
+                ]);
                 
                 // Open the database and object store
                 const request = indexedDB.open(state.currentDb);
@@ -482,42 +1013,19 @@
                             <span class="material-icons empty-icon">info</span>
                             <div>No items found in this object store</div>
                         </div>
-                        <div class="upload-area" id="upload-area">
-                            <p><span class="material-icons">cloud_upload</span><br>Drag & drop files here or click to select</p>
-                            <button class="action-btn" id="upload-btn">
+                        <div class="upload-container">
+                            <button class="upload-btn" id="upload-files-btn">
                                 <span class="material-icons">upload</span>
-                                Select Files
+                                Upload Files
                             </button>
+                            <input type="file" id="file-upload" class="upload-input" multiple>
                         </div>
                     `;
                     
-                    // Setup upload area
-                    const uploadArea = document.getElementById('upload-area');
-                    const uploadBtn = document.getElementById('upload-btn');
-                    
-                    uploadArea.addEventListener('click', () => fileUpload.click());
-                    uploadArea.addEventListener('dragover', (e) => {
-                        e.preventDefault();
-                        uploadArea.style.backgroundColor = '#f0f0f0';
-                    });
-                    
-                    uploadArea.addEventListener('dragleave', () => {
-                        uploadArea.style.backgroundColor = '';
-                    });
-                    
-                    uploadArea.addEventListener('drop', (e) => {
-                        e.preventDefault();
-                        uploadArea.style.backgroundColor = '';
-                        if (e.dataTransfer.files.length) {
-                            handleFileUpload({ target: { files: e.dataTransfer.files } });
-                        }
-                    });
-                    
-                    uploadBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
+                    // Add event listener for upload button
+                    document.getElementById('upload-files-btn').addEventListener('click', () => {
                         fileUpload.click();
                     });
-                    
                     return;
                 }
                 
@@ -526,18 +1034,24 @@
                 header.innerHTML = `
                     <div class="content-title">Items in ${state.currentStore}</div>
                     <div class="content-actions">
-                        <button class="action-btn" id="upload-btn">
+                        <button class="action-btn" id="upload-files-btn">
                             <span class="material-icons">upload</span>
                             Upload Files
+                        </button>
+                        <button class="action-btn delete" id="delete-store-btn">
+                            <span class="material-icons">delete</span>
+                            Delete Store
                         </button>
                     </div>
                 `;
                 mainContent.appendChild(header);
                 
-                // Setup upload button
-                document.getElementById('upload-btn').addEventListener('click', () => {
+                // Add event listeners for buttons
+                document.getElementById('upload-files-btn').addEventListener('click', () => {
                     fileUpload.click();
                 });
+                
+                document.getElementById('delete-store-btn').addEventListener('click', deleteCurrentStore);
                 
                 const list = document.createElement('ul');
                 list.className = 'item-list';
@@ -580,76 +1094,34 @@
                 mainContent.appendChild(list);
             }
 
-            async function handleFileUpload(event) {
-                const files = event.target.files;
-                if (!files || files.length === 0) return;
-                
-                updateStatus(`Uploading ${files.length} file(s) to ${state.currentStore}`);
-                progressContainer.style.display = 'block';
-                progressBar.style.width = '0%';
-                
-                try {
-                    const request = indexedDB.open(state.currentDb);
-                    
-                    request.onsuccess = (event) => {
-                        const db = event.target.result;
-                        const transaction = db.transaction(state.currentStore, 'readwrite');
-                        const store = transaction.objectStore(state.currentStore);
-                        
-                        let filesProcessed = 0;
-                        const totalFiles = files.length;
-                        
-                        Array.from(files).forEach(file => {
-                            const reader = new FileReader();
-                            
-                            reader.onload = (e) => {
-                                // Use the filename as the key
-                                const putRequest = store.put(file, file.name);
-                                
-                                putRequest.onsuccess = () => {
-                                    filesProcessed++;
-                                    const progress = Math.floor((filesProcessed / totalFiles) * 100);
-                                    progressBar.style.width = `${progress}%`;
-                                    
-                                    if (filesProcessed === totalFiles) {
-                                        updateStatus(`Successfully uploaded ${totalFiles} file(s)`);
-                                        setTimeout(() => {
-                                            progressContainer.style.display = 'none';
-                                            // Refresh the current view
-                                            openObjectStore(state.currentStore);
-                                        }, 500);
-                                    }
-                                };
-                                
-                                putRequest.onerror = (event) => {
-                                    updateStatus(`Error uploading file ${file.name}: ${event.target.error}`, true);
-                                    console.error('Error uploading file:', event.target.error);
-                                };
-                            };
-                            
-                            reader.readAsArrayBuffer(file);
-                        });
-                        
-                        transaction.oncomplete = () => {
-                            db.close();
-                        };
-                    };
-                    
-                    request.onerror = (event) => {
-                        updateStatus(`Error opening database: ${event.target.error}`, true);
-                        console.error('Error opening database:', event.target.error);
-                    };
-                } catch (error) {
-                    updateStatus("Error uploading files: " + error.message, 'error');
-                    progressContainer.style.display = 'none';
+            function extractFilename(key) {
+                if (typeof key === 'string' && key.includes('/')) {
+                    const parts = key.split('/');
+                    return parts[parts.length - 1]; // Return the last segment as filename
                 }
-                
-                // Reset the file input
-                event.target.value = '';
+                return formatKey(key);
+            }
+
+            function getFileTypeInfo(item) {
+                if (typeof item.key === 'string' && item.key.includes('/')) {
+                    const filename = extractFilename(item.key);
+                    const extension = filename.includes('.') 
+                        ? filename.split('.').pop().toUpperCase() 
+                        : 'FILE';
+                    return `${extension} file | ${getValueType(item.value)}`;
+                }
+                return `Key: ${typeof item.key} | Value: ${getValueType(item.value)}`;
+            }
+
+            function getValueType(value) {
+                if (value instanceof ArrayBuffer) return 'ArrayBuffer';
+                if (value instanceof Blob) return 'Blob';
+                return typeof value;
             }
 
             function previewItem(item) {
                 state.currentItem = item;
+                deleteItemBtn.style.display = 'block';
                 
                 // Highlight the selected item
                 document.querySelectorAll('.item-card').forEach(card => {
@@ -685,6 +1157,7 @@
                             code.textContent = e.target.result;
                             pre.appendChild(code);
                             previewContent.appendChild(pre);
+                            hljs.highlightElement(code);
                         };
                         reader.readAsText(item.value);
                     } else {
@@ -708,6 +1181,7 @@
                         code.textContent = JSON.stringify(item.value, null, 2);
                         pre.appendChild(code);
                         previewContent.appendChild(pre);
+                        hljs.highlightElement(code);
                     } catch (e) {
                         previewContent.textContent = `[Unable to display value: ${e.message}]`;
                     }
@@ -715,6 +1189,45 @@
                     // Primitive value
                     previewContent.textContent = String(item.value);
                 }
+                
+                // Update breadcrumb if we're not already showing the item level
+                if (!breadcrumb.lastChild.dataset.path || 
+                    breadcrumb.lastChild.dataset.path !== item.storeName) {
+                    const pathParts = item.storeName.split('/');
+                    const breadcrumbItems = [
+                        { type: 'root', name: 'Home', icon: 'home' },
+                        { type: 'db', name: state.currentDb, icon: 'storage' }
+                    ];
+                    
+                    // Add each part of the path to breadcrumb
+                    let currentPath = '';
+                    pathParts.forEach((part, index) => {
+                        currentPath = currentPath ? `${currentPath}/${part}` : part;
+                        breadcrumbItems.push({
+                            type: index === pathParts.length - 1 ? 'store' : 'folder',
+                            name: part,
+                            icon: index === pathParts.length - 1 ? 'folder' : 'folder',
+                            path: currentPath
+                        });
+                    });
+                    
+                    // Add the item itself
+                    breadcrumbItems.push({
+                        type: 'item',
+                        name: extractFilename(item.key),
+                        icon: 'insert_drive_file'
+                    });
+                    
+                    updateBreadcrumb(breadcrumbItems);
+                }
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
             }
 
             function deleteItem(item) {
@@ -735,7 +1248,13 @@
                     deleteRequest.onsuccess = () => {
                         updateStatus(`Item "${extractFilename(item.key)}" deleted`);
                         // Refresh the current view
-                        openObjectStore(state.currentStore);
+                        if (state.currentStore) {
+                            if (state.currentStore.includes('/')) {
+                                openPathAsFolder(state.currentStore.split('/').slice(0, -1).join('/'));
+                            } else {
+                                openObjectStore(state.currentStore);
+                            }
+                        }
                     };
                     
                     deleteRequest.onerror = (event) => {
@@ -754,37 +1273,202 @@
                 };
             }
 
-            function extractFilename(key) {
-                if (typeof key === 'string' && key.includes('/')) {
-                    const parts = key.split('/');
-                    return parts[parts.length - 1];
+            function deleteCurrentItem() {
+                if (state.currentItem) {
+                    deleteItem(state.currentItem);
                 }
-                return formatKey(key);
             }
 
-            function getFileTypeInfo(item) {
-                if (typeof item.key === 'string' && item.key.includes('/')) {
-                    const filename = extractFilename(item.key);
-                    const extension = filename.includes('.') 
-                        ? filename.split('.').pop().toUpperCase() 
-                        : 'FILE';
-                    return `${extension} file | ${getValueType(item.value)}`;
+            function deleteCurrentStore() {
+                if (!state.currentDb || !state.currentStore) return;
+                
+                if (!confirm(`Are you sure you want to delete the object store "${state.currentStore}"? This cannot be undone.`)) {
+                    return;
                 }
-                return `Key: ${typeof item.key} | Value: ${getValueType(item.value)}`;
+                
+                updateStatus(`Deleting object store: ${state.currentStore}`);
+                
+                // We need to open the database with a higher version to delete the store
+                const request = indexedDB.open(state.currentDb);
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const version = db.version + 1;
+                    db.close();
+                    
+                    // Reopen with higher version
+                    const upgradeRequest = indexedDB.open(state.currentDb, version);
+                    
+                    upgradeRequest.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        db.deleteObjectStore(state.currentStore);
+                        updateStatus(`Object store "${state.currentStore}" deleted`);
+                    };
+                    
+                    upgradeRequest.onsuccess = (event) => {
+                        event.target.result.close();
+                        refreshDatabases();
+                        mainContent.innerHTML = `
+                            <div class="empty-state">
+                                <span class="material-icons empty-icon">check_circle</span>
+                                <div>Object store "${state.currentStore}" deleted successfully</div>
+                            </div>
+                        `;
+                    };
+                    
+                    upgradeRequest.onerror = (event) => {
+                        updateStatus(`Error deleting object store: ${event.target.error}`, true);
+                        console.error('Error deleting object store:', event.target.error);
+                    };
+                };
+                
+                request.onerror = (event) => {
+                    updateStatus(`Error opening database: ${event.target.error}`, true);
+                    console.error('Error opening database:', event.target.error);
+                };
             }
 
-            function getValueType(value) {
-                if (value instanceof ArrayBuffer) return 'ArrayBuffer';
-                if (value instanceof Blob) return 'Blob';
-                return typeof value;
+            function handleFileUpload(event) {
+                const files = event.target.files;
+                if (!files || files.length === 0) return;
+                
+                updateStatus(`Uploading ${files.length} file(s) to ${state.currentStore}`);
+                
+                const request = indexedDB.open(state.currentDb);
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const transaction = db.transaction(state.currentStore, 'readwrite');
+                    const store = transaction.objectStore(state.currentStore);
+                    
+                    let filesProcessed = 0;
+                    
+                    Array.from(files).forEach(file => {
+                        const reader = new FileReader();
+                        
+                        reader.onload = (e) => {
+                            // Use the filename as the key
+                            const putRequest = store.put(file, file.name);
+                            
+                            putRequest.onsuccess = () => {
+                                filesProcessed++;
+                                if (filesProcessed === files.length) {
+                                    updateStatus(`Successfully uploaded ${files.length} file(s)`);
+                                    // Refresh the current view
+                                    if (state.currentStore.includes('/')) {
+                                        openPathAsFolder(state.currentStore.split('/').slice(0, -1).join('/'));
+                                    } else {
+                                        openObjectStore(state.currentStore);
+                                    }
+                                }
+                            };
+                            
+                            putRequest.onerror = (event) => {
+                                updateStatus(`Error uploading file ${file.name}: ${event.target.error}`, true);
+                                console.error('Error uploading file:', event.target.error);
+                            };
+                        };
+                        
+                        reader.readAsArrayBuffer(file);
+                    });
+                    
+                    transaction.oncomplete = () => {
+                        db.close();
+                    };
+                };
+                
+                request.onerror = (event) => {
+                    updateStatus(`Error opening database: ${event.target.error}`, true);
+                    console.error('Error opening database:', event.target.error);
+                };
+                
+                // Reset the file input
+                event.target.value = '';
             }
 
-            function formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            function updateBreadcrumb(items) {
+                breadcrumb.innerHTML = '';
+                
+                items.forEach((item, index) => {
+                    const isLast = index === items.length - 1;
+                    
+                    const crumb = document.createElement('div');
+                    crumb.className = 'breadcrumb-item';
+                    crumb.dataset.type = item.type;
+                    
+                    if (item.type === 'db') crumb.dataset.dbName = item.name;
+                    if (item.type === 'store' || item.type === 'folder' || item.type === 'file') {
+                        crumb.dataset.path = item.path;
+                    }
+                    
+                    crumb.innerHTML = `
+                        <span class="material-icons">${item.icon}</span>
+                        ${item.name}
+                    `;
+                    
+                    crumb.addEventListener('click', () => navigateFromBreadcrumb(item, index));
+                    breadcrumb.appendChild(crumb);
+                    
+                    if (!isLast) {
+                        const separator = document.createElement('div');
+                        separator.className = 'breadcrumb-separator';
+                        separator.innerHTML = '<span class="material-icons">chevron_right</span>';
+                        breadcrumb.appendChild(separator);
+                    }
+                });
+            }
+
+            function navigateFromBreadcrumb(item, index) {
+                switch (item.type) {
+                    case 'root':
+                        // Reset to initial state
+                        state.currentDb = null;
+                        state.currentStore = null;
+                        state.currentItem = null;
+                        deleteItemBtn.style.display = 'none';
+                        
+                        // Clear active states
+                        document.querySelectorAll('.database-item').forEach(item => item.classList.remove('active'));
+                        document.querySelectorAll('.item-card').forEach(item => item.classList.remove('active'));
+                        
+                        // Show empty main content
+                        mainContent.innerHTML = `
+                            <div class="empty-state">
+                                <span class="material-icons empty-icon">folder_open</span>
+                                <div>Select a database or object store to view contents</div>
+                            </div>
+                        `;
+                        
+                        // Reset preview
+                        previewContent.textContent = 'Select an item to preview its contents';
+                        break;
+                        
+                    case 'db':
+                        // Go back to database view
+                        openDatabase(state.currentDb, state.databases.find(db => db.name === state.currentDb).version);
+                        break;
+                        
+                    case 'folder':
+                    case 'store':
+                        // Go back to this folder/store
+                        openPathAsFolder(item.path);
+                        break;
+                        
+                    case 'file':
+                        // Go back to this file
+                        openPathAsFile(item.path);
+                        break;
+                        
+                    case 'item':
+                        // Item is already selected, no action needed
+                        break;
+                }
+            }
+
+            function updateStatus(message, isError = false) {
+                statusBar.innerHTML = isError 
+                    ? `<span style="color: var(--error)">${message}</span>`
+                    : message;
             }
 
             function formatKey(key) {
@@ -798,10 +1482,13 @@
                 return String(key);
             }
 
-            function updateStatus(message, isError = false) {
-                statusBar.innerHTML = isError 
-                    ? `<span style="color: #b00020">${message}</span>`
-                    : message;
+            function escapeHtml(unsafe) {
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
             }
         });
     </script>
