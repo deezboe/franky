@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-container {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        .upload-container:hover {
+            background-color: #f5f5f5;
+        }
+        #fileInput {
+            display: none;
+        }
+        #progressBar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            margin-top: 10px;
+            display: none;
+        }
+        #progressBarFill {
+            height: 100%;
+            width: 0%;
+            background-color: #4CAF50;
+        }
+        #status {
+            margin-top: 10px;
+            color: #666;
+        }
+        #fileList {
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .file-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Upload Demo</h1>
+    
+    <div class="upload-container" id="uploadArea">
+        <h2>Click to select files or drag files here</h2>
+        <p>Files will be uploaded to your browser's storage</p>
+        <input type="file" id="fileInput" multiple>
+        <div id="progressBar">
+            <div id="progressBarFill"></div>
+        </div>
+        <div id="status">Ready to upload</div>
+    </div>
+    
+    <div id="fileList">
+        <h3>Uploaded Files</h3>
+        <div id="files"></div>
+    </div>
+
+    <script>
+        // Simple in-memory file storage
+        const fileStorage = {};
+        
+        // DOM elements
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const progressBar = document.getElementById('progressBar');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const statusElement = document.getElementById('status');
+        const filesContainer = document.getElementById('files');
+        
+        // Handle file selection
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#e9e9e9';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.backgroundColor = '';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '';
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        // Handle file input change
+        fileInput.addEventListener('change', (e) => {
+            if (fileInput.files.length > 0) {
+                handleFiles(fileInput.files);
+            }
+        });
+        
+        // Main file handling function
+        function handleFiles(files) {
+            progressBar.style.display = 'block';
+            statusElement.textContent = `Uploading ${files.length} file(s)...`;
+            
+            let uploadedCount = 0;
+            
+            Array.from(files).forEach((file, index) => {
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    // Store file in memory
+                    fileStorage[file.name] = {
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        lastModified: file.lastModified,
+                        content: e.target.result
+                    };
+                    
+                    // Update progress
+                    uploadedCount++;
+                    const progress = Math.round((uploadedCount / files.length) * 100);
+                    progressBarFill.style.width = `${progress}%`;
+                    
+                    if (uploadedCount === files.length) {
+                        statusElement.textContent = `Upload complete! ${uploadedCount} file(s) uploaded.`;
+                        setTimeout(() => {
+                            progressBar.style.display = 'none';
+                            progressBarFill.style.width = '0%';
+                        }, 2000);
+                        
+                        // Update file list
+                        updateFileList();
+                    }
+                };
+                
+                reader.onerror = () => {
+                    statusElement.textContent = 'Error reading file: ' + file.name;
+                };
+                
+                // Read file as ArrayBuffer
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        // Update the displayed file list
+        function updateFileList() {
+            filesContainer.innerHTML = '';
+            
+            if (Object.keys(fileStorage).length === 0) {
+                filesContainer.innerHTML = '<p>No files uploaded yet.</p>';
+                return;
+            }
+            
+            Object.values(fileStorage).forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const sizeInKB = Math.round(file.size / 1024);
+                const modifiedDate = new Date(file.lastModified).toLocaleString();
+                
+                fileItem.innerHTML = `
+                    <strong>${file.name}</strong>
+                    <div>Type: ${file.type || 'Unknown'}</div>
+                    <div>Size: ${sizeInKB} KB</div>
+                    <div>Modified: ${modifiedDate}</div>
+                `;
+                
+                filesContainer.appendChild(fileItem);
+            });
+        }
+        
+        // Initialize
+        updateFileList();
+    </script>
+</body>
+</html>
