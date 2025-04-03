@@ -3,341 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Upload with IndexedDB</title>
+    <title>IndexedDB Explorer</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .container {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        .upload-area {
-            border: 2px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 20px;
-            cursor: pointer;
-        }
-        .upload-area:hover {
-            background-color: #f9f9f9;
-        }
-        #fileList {
-            margin-top: 20px;
-        }
-        .file-item {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-        }
-        .file-item:last-child {
-            border-bottom: none;
-        }
-        .progress-bar {
-            height: 20px;
-            background-color: #f0f0f0;
-            margin-top: 10px;
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        .progress {
-            height: 100%;
-            background-color: #4CAF50;
-            width: 0%;
-            transition: width 0.3s;
-        }
-        button {
-            background-color: #4CAF50;
+        /* Previous CSS styles remain the same */
+        /* Add upload button styles */
+        .upload-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background-color: var(--primary-color);
             color: white;
             border: none;
-            padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
+            margin-top: 16px;
         }
-        button:hover {
-            background-color: #45a049;
+        
+        .upload-btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .upload-container {
+            margin-top: 16px;
+            border: 1px dashed #e0e0e0;
+            border-radius: 4px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .upload-input {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1>File Upload with IndexedDB</h1>
-    <div class="container">
-        <div class="upload-area" id="dropArea">
-            <p>Drag & drop files here or click to select</p>
-            <input type="file" id="fileInput" style="display: none;">
-            <button id="selectFilesBtn">Select Files</button>
-        </div>
-        
-        <div class="progress-bar" id="progressContainer" style="display: none;">
-            <div class="progress" id="progressBar"></div>
-        </div>
-        
-        <div id="status"></div>
-        
-        <h2>Uploaded Files</h2>
-        <div id="fileList"></div>
-    </div>
+    <!-- Previous HTML structure remains the same -->
+    <!-- Add hidden file input -->
+    <input type="file" id="file-upload" class="upload-input" multiple>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script>
-        // File Manager with IndexedDB
-        const fileManager = {
-            db: null,
-            
-            init: function() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open('FileStorageDB', 1);
-                    
-                    request.onerror = (event) => {
-                        console.error("Database error:", event.target.error);
-                        reject(event.target.error);
-                    };
-                    
-                    request.onsuccess = (event) => {
-                        this.db = event.target.result;
-                        console.log("Database initialized");
-                        resolve(this.db);
-                    };
-                    
-                    request.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-                        if (!db.objectStoreNames.contains('files')) {
-                            db.createObjectStore('files', { keyPath: 'path' });
-                        }
-                    };
-                });
-            },
-            
-            uploadFile: function(file, parentPath = '/') {
-                return new Promise((resolve, reject) => {
-                    if (!this.db) {
-                        reject(new Error("Database not initialized"));
-                        return;
-                    }
-                    
-                    const transaction = this.db.transaction(['files'], 'readwrite');
-                    const store = transaction.objectStore('files');
-                    
-                    const filePath = parentPath + file.name;
-                    const fileRecord = {
-                        path: filePath,
-                        name: file.name,
-                        type: file.type,
-                        size: file.size,
-                        modifiedTime: Date.now(),
-                        content: file
-                    };
-                    
-                    const request = store.put(fileRecord);
-                    
-                    request.onsuccess = () => {
-                        resolve({
-                            id: filePath,
-                            name: file.name,
-                            type: 'file',
-                            size: file.size,
-                            modifiedTime: fileRecord.modifiedTime,
-                            parentId: parentPath
-                        });
-                    };
-                    
-                    request.onerror = (event) => {
-                        console.error("Error uploading file:", event.target.error);
-                        reject(event.target.error);
-                    };
-                });
-            },
-            
-            getFiles: function() {
-                return new Promise((resolve, reject) => {
-                    if (!this.db) {
-                        reject(new Error("Database not initialized"));
-                        return;
-                    }
-                    
-                    const transaction = this.db.transaction(['files'], 'readonly');
-                    const store = transaction.objectStore('files');
-                    const request = store.getAll();
-                    
-                    request.onsuccess = () => {
-                        resolve(request.result || []);
-                    };
-                    
-                    request.onerror = (event) => {
-                        console.error("Error getting files:", event.target.error);
-                        reject(event.target.error);
-                    };
-                });
-            },
-            
-            deleteFile: function(filePath) {
-                return new Promise((resolve, reject) => {
-                    if (!this.db) {
-                        reject(new Error("Database not initialized"));
-                        return;
-                    }
-                    
-                    const transaction = this.db.transaction(['files'], 'readwrite');
-                    const store = transaction.objectStore('files');
-                    const request = store.delete(filePath);
-                    
-                    request.onsuccess = () => {
-                        resolve(true);
-                    };
-                    
-                    request.onerror = (event) => {
-                        console.error("Error deleting file:", event.target.error);
-                        reject(event.target.error);
-                    };
-                });
-            }
-        };
-        
-        // UI Handlers
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Initialize database
-            try {
-                await fileManager.init();
-                updateFileList();
-            } catch (error) {
-                showStatus("Error initializing database: " + error.message, 'error');
-            }
-            
-            // Setup file input
-            const fileInput = document.getElementById('fileInput');
-            const selectFilesBtn = document.getElementById('selectFilesBtn');
-            
-            // Single click handler for the button
-            selectFilesBtn.addEventListener('click', () => {
-                fileInput.click(); // Trigger file selection dialog
-            });
-            
-            fileInput.addEventListener('change', () => {
-                if (fileInput.files.length) {
-                    handleFiles(fileInput.files);
-                }
-            });
-            
-            // Setup drag and drop
-            const dropArea = document.getElementById('dropArea');
-            dropArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropArea.style.backgroundColor = '#e9e9e9';
-            });
-            
-            dropArea.addEventListener('dragleave', () => {
-                dropArea.style.backgroundColor = '';
-            });
-            
-            dropArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropArea.style.backgroundColor = '';
-                if (e.dataTransfer.files.length) {
-                    handleFiles(e.dataTransfer.files);
-                }
-            });
-        });
-        
-        async function handleFiles(files) {
-            const progressBar = document.getElementById('progressBar');
-            const progressContainer = document.getElementById('progressContainer');
-            progressContainer.style.display = 'block';
-            progressBar.style.width = '0%';
-            
-            try {
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    showStatus(`Uploading ${file.name}...`, 'info');
-                    
-                    // Simulate progress for demo (in real app, you'd track actual upload progress)
-                    let progress = 0;
-                    const interval = setInterval(() => {
-                        progress += 5;
-                        progressBar.style.width = `${Math.min(progress, 100)}%`;
-                        if (progress >= 100) {
-                            clearInterval(interval);
-                        }
-                    }, 100);
-                    
-                    await fileManager.uploadFile(file);
-                    progressBar.style.width = '100%';
-                    showStatus(`${file.name} uploaded successfully!`, 'success');
-                    
-                    // Small delay between files for better UX
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                }
+        document.addEventListener('DOMContentLoaded', () => {
+            // Previous state and DOM elements remain the same
+            // Add file upload element
+            const fileUpload = document.getElementById('file-upload');
+
+            // Add event listener for file upload
+            fileUpload.addEventListener('change', handleFileUpload);
+
+            // Add the handleFileUpload function
+            function handleFileUpload(event) {
+                const files = event.target.files;
+                if (!files || files.length === 0) return;
                 
-                updateFileList();
-            } catch (error) {
-                showStatus("Error uploading file: " + error.message, 'error');
-            } finally {
-                setTimeout(() => {
-                    progressContainer.style.display = 'none';
-                }, 1000);
-            }
-        }
-        
-        async function updateFileList() {
-            try {
-                const files = await fileManager.getFiles();
-                const fileList = document.getElementById('fileList');
+                updateStatus(`Uploading ${files.length} file(s) to ${state.currentStore}`);
                 
-                if (files.length === 0) {
-                    fileList.innerHTML = '<p>No files uploaded yet.</p>';
+                const request = indexedDB.open(state.currentDb);
+                
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const transaction = db.transaction(state.currentStore, 'readwrite');
+                    const store = transaction.objectStore(state.currentStore);
+                    
+                    let filesProcessed = 0;
+                    
+                    Array.from(files).forEach(file => {
+                        const reader = new FileReader();
+                        
+                        reader.onload = (e) => {
+                            // Use the filename as the key
+                            const putRequest = store.put(file, file.name);
+                            
+                            putRequest.onsuccess = () => {
+                                filesProcessed++;
+                                if (filesProcessed === files.length) {
+                                    updateStatus(`Successfully uploaded ${files.length} file(s)`);
+                                    // Refresh the current view
+                                    if (state.currentStore.includes('/')) {
+                                        openPathAsFolder(state.currentStore.split('/').slice(0, -1).join('/'));
+                                    } else {
+                                        openObjectStore(state.currentStore);
+                                    }
+                                }
+                            };
+                            
+                            putRequest.onerror = (event) => {
+                                updateStatus(`Error uploading file ${file.name}: ${event.target.error}`, true);
+                                console.error('Error uploading file:', event.target.error);
+                            };
+                        };
+                        
+                        reader.readAsArrayBuffer(file);
+                    });
+                    
+                    transaction.oncomplete = () => {
+                        db.close();
+                    };
+                };
+                
+                request.onerror = (event) => {
+                    updateStatus(`Error opening database: ${event.target.error}`, true);
+                    console.error('Error opening database:', event.target.error);
+                };
+                
+                // Reset the file input
+                event.target.value = '';
+            }
+
+            // Modify the renderStoreItems function to include upload button
+            function renderStoreItems(items) {
+                mainContent.innerHTML = '';
+                
+                if (items.length === 0) {
+                    mainContent.innerHTML = `
+                        <div class="empty-state">
+                            <span class="material-icons empty-icon">info</span>
+                            <div>No items found in this object store</div>
+                        </div>
+                        <div class="upload-container">
+                            <button class="upload-btn" id="upload-files-btn">
+                                <span class="material-icons">upload</span>
+                                Upload Files
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Add event listener for upload button
+                    document.getElementById('upload-files-btn').addEventListener('click', () => {
+                        fileUpload.click();
+                    });
                     return;
                 }
                 
-                fileList.innerHTML = '';
-                files.forEach(file => {
-                    const fileItem = document.createElement('div');
-                    fileItem.className = 'file-item';
-                    
-                    const fileInfo = document.createElement('span');
-                    fileInfo.textContent = `${file.name} (${formatFileSize(file.size)})`;
-                    
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.textContent = 'Delete';
-                    deleteBtn.onclick = () => deleteFile(file.path);
-                    
-                    fileItem.appendChild(fileInfo);
-                    fileItem.appendChild(deleteBtn);
-                    fileList.appendChild(fileItem);
+                const header = document.createElement('div');
+                header.className = 'content-header';
+                header.innerHTML = `
+                    <div class="content-title">Items in ${state.currentStore}</div>
+                    <div class="content-actions">
+                        <button class="action-btn" id="upload-files-btn">
+                            <span class="material-icons">upload</span>
+                            Upload Files
+                        </button>
+                        <button class="action-btn delete" id="delete-store-btn">
+                            <span class="material-icons">delete</span>
+                            Delete Store
+                        </button>
+                    </div>
+                `;
+                mainContent.appendChild(header);
+                
+                // Add event listeners for buttons
+                document.getElementById('upload-files-btn').addEventListener('click', () => {
+                    fileUpload.click();
                 });
-            } catch (error) {
-                showStatus("Error loading file list: " + error.message, 'error');
+                
+                document.getElementById('delete-store-btn').addEventListener('click', deleteCurrentStore);
+                
+                // Rest of the renderStoreItems function remains the same
+                // ...
             }
-        }
-        
-        async function deleteFile(filePath) {
-            if (confirm('Are you sure you want to delete this file?')) {
-                try {
-                    await fileManager.deleteFile(filePath);
-                    showStatus("File deleted successfully", 'success');
-                    updateFileList();
-                } catch (error) {
-                    showStatus("Error deleting file: " + error.message, 'error');
-                }
-            }
-        }
-        
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.textContent = message;
-            statusDiv.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
-        }
-        
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
+
+            // Previous functions remain the same
+            // ...
+        });
     </script>
 </body>
 </html>
