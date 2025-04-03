@@ -71,7 +71,7 @@
         <div class="upload-area" id="dropArea">
             <p>Drag & drop files here or click to select</p>
             <input type="file" id="fileInput" style="display: none;">
-            <button onclick="document.getElementById('fileInput').click()">Select Files</button>
+            <button id="selectFilesBtn">Select Files</button>
         </div>
         
         <div class="progress-bar" id="progressContainer" style="display: none;">
@@ -209,7 +209,19 @@
             }
             
             // Setup file input
-            document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+            const fileInput = document.getElementById('fileInput');
+            const selectFilesBtn = document.getElementById('selectFilesBtn');
+            
+            // Single click handler for the button
+            selectFilesBtn.addEventListener('click', () => {
+                fileInput.click(); // Trigger file selection dialog
+            });
+            
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length) {
+                    handleFiles(fileInput.files);
+                }
+            });
             
             // Setup drag and drop
             const dropArea = document.getElementById('dropArea');
@@ -229,17 +241,7 @@
                     handleFiles(e.dataTransfer.files);
                 }
             });
-            
-            dropArea.addEventListener('click', () => {
-                document.getElementById('fileInput').click();
-            });
         });
-        
-        function handleFileSelect(event) {
-            if (event.target.files.length) {
-                handleFiles(event.target.files);
-            }
-        }
         
         async function handleFiles(files) {
             const progressBar = document.getElementById('progressBar');
