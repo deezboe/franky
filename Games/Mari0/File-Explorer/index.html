@@ -371,25 +371,33 @@
             text-align: center;
             margin-bottom: 20px;
             cursor: pointer;
+            transition: background-color 0.2s ease;
         }
 
         .upload-area:hover {
             background-color: rgba(98, 0, 238, 0.04);
         }
 
-        .progress-bar {
+        .progress-container {
             height: 4px;
             background-color: #f0f0f0;
             margin-top: 10px;
             border-radius: 3px;
             overflow: hidden;
+            display: none;
         }
 
-        .progress {
+        .progress-bar {
             height: 100%;
             background-color: var(--primary-color);
             width: 0%;
-            transition: width 0.3s;
+            transition: width 0.3s ease;
+        }
+
+        .upload-status {
+            margin-top: 8px;
+            font-size: 0.9rem;
+            color: #757575;
         }
 
         /* File preview styles */
@@ -437,17 +445,18 @@
         
         <!-- Upload Container -->
         <div class="upload-container" id="upload-container">
-            <div class="upload-area" id="dropArea">
+            <div class="upload-area" id="drop-area">
                 <p>Drag & drop files here or click to select</p>
-                <input type="file" id="fileInput" style="display: none;" multiple>
-                <button class="action-btn" id="selectFilesBtn">
+                <input type="file" id="file-input" style="display: none;" multiple>
+                <button class="action-btn" id="select-files-btn">
                     <span class="material-icons">upload</span>
                     Select Files
                 </button>
             </div>
-            <div class="progress-bar" id="progressContainer">
-                <div class="progress" id="progressBar"></div>
+            <div class="progress-container" id="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
             </div>
+            <div class="upload-status" id="upload-status"></div>
         </div>
     </div>
 
@@ -481,7 +490,7 @@
                 currentStore: null,
                 currentItem: null,
                 databases: [],
-                pathStructure: {} // To store the hierarchical structure of paths
+                pathStructure: {}
             };
 
             // DOM elements
@@ -492,13 +501,14 @@
             const refreshBtn = document.getElementById('refresh-btn');
             const statusBar = document.getElementById('status-bar');
             const deleteItemBtn = document.getElementById('delete-item-btn');
-            
+
             // File upload elements
-            const fileInput = document.getElementById('fileInput');
-            const selectFilesBtn = document.getElementById('selectFilesBtn');
-            const dropArea = document.getElementById('dropArea');
-            const progressBar = document.getElementById('progressBar');
-            const progressContainer = document.getElementById('progressContainer');
+            const fileInput = document.getElementById('file-input');
+            const selectFilesBtn = document.getElementById('select-files-btn');
+            const dropArea = document.getElementById('drop-area');
+            const progressBar = document.getElementById('progress-bar');
+            const progressContainer = document.getElementById('progress-container');
+            const uploadStatus = document.getElementById('upload-status');
             const uploadContainer = document.getElementById('upload-container');
 
             // Initialize the explorer
@@ -509,114 +519,26 @@
             deleteItemBtn.addEventListener('click', deleteCurrentItem);
             
             // File upload event listeners
-            selectFilesBtn.addEventListener('click', () => {
-                fileInput.click();
-            });
-
-            fileInput.addEventListener('change', () => {
-                if (fileInput.files.length) {
-                    handleFiles(fileInput.files);
-                }
-            });
-
-            // Setup drag and drop
+            selectFilesBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelection);
+            
+            // Drag and drop handlers
             dropArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 dropArea.style.backgroundColor = 'rgba(98, 0, 238, 0.08)';
             });
-
+            
             dropArea.addEventListener('dragleave', () => {
                 dropArea.style.backgroundColor = '';
             });
-
+            
             dropArea.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropArea.style.backgroundColor = '';
-                if (e.dataTransfer.files.length) {
+                if (e.dataTransfer.files.length > 0) {
                     handleFiles(e.dataTransfer.files);
                 }
             });
-
-            // Initialize upload interface based on current state
-            function initUpload() {
-                if (state.currentStore) {
-                    uploadContainer.style.display = 'block';
-                    progressContainer.style.display = 'none';
-                } else {
-                    uploadContainer.style.display = 'none';
-                }
-            }
-
-            // Handle file uploads
-            async function handleFiles(files) {
-                if (!state.currentDb || !state.currentStore) {
-                    updateStatus("Please select a database and object store first", true);
-                    return;
-                }
-
-                progressContainer.style.display = 'block';
-                progressBar.style.width = '0%';
-
-                try {
-                    const db = await new Promise((resolve, reject) => {
-                        const request = indexedDB.open(state.currentDb);
-                        request.onsuccess = () => resolve(request.result);
-                        request.onerror = () => reject(request.error);
-                    });
-
-                    const transaction = db.transaction(state.currentStore, 'readwrite');
-                    const store = transaction.objectStore(state.currentStore);
-
-                    let filesProcessed = 0;
-                    const totalFiles = files.length;
-
-                    for (const file of files) {
-                        updateStatus(`Uploading ${file.name} (${filesProcessed+1}/${totalFiles})...`);
-                        
-                        // Update progress bar
-                        progressBar.style.width = `${(filesProcessed / totalFiles) * 100}%`;
-                        
-                        // Read file as ArrayBuffer
-                        const fileData = await new Promise((resolve) => {
-                            const reader = new FileReader();
-                            reader.onload = (e) => resolve(e.target.result);
-                            reader.readAsArrayBuffer(file);
-                        });
-
-                        // Store in IndexedDB using filename as key
-                        const putRequest = store.put(fileData, file.name);
-                        
-                        await new Promise((resolve, reject) => {
-                            putRequest.onsuccess = resolve;
-                            putRequest.onerror = () => reject(putRequest.error);
-                        });
-
-                        filesProcessed++;
-                        progressBar.style.width = `${(filesProcessed / totalFiles) * 100}%`;
-                    }
-
-                    transaction.oncomplete = () => {
-                        db.close();
-                        progressBar.style.width = '100%';
-                        updateStatus(`Successfully uploaded ${filesProcessed} file(s)`);
-                        
-                        // Refresh the current view
-                        if (state.currentStore.includes('/')) {
-                            openPathAsFolder(state.currentStore.split('/').slice(0, -1).join('/'));
-                        } else {
-                            openObjectStore(state.currentStore);
-                        }
-                        
-                        setTimeout(() => {
-                            progressContainer.style.display = 'none';
-                        }, 1000);
-                    };
-                } catch (error) {
-                    updateStatus(`Error uploading files: ${error.message}`, true);
-                    console.error('Upload error:', error);
-                    progressContainer.style.display = 'none';
-                }
-            }
 
             // Functions
             function refreshDatabases() {
@@ -757,6 +679,8 @@
                 renderTreeItems(treeContainer, state.pathStructure);
                 
                 mainContent.appendChild(treeContainer);
+                
+                // Initialize upload functionality
                 initUpload();
             }
 
@@ -901,6 +825,9 @@
                         updateStatus(`Showing contents of ${path}`);
                     });
                 };
+                
+                // Initialize upload functionality
+                initUpload();
             }
 
             function openPathAsFile(path) {
@@ -957,6 +884,9 @@
                         }
                     };
                 };
+                
+                // Initialize upload functionality
+                initUpload();
             }
 
             function renderPathContents(folders, files) {
@@ -1013,11 +943,11 @@
                     const displayName = extractFilename(file.key);
                     const fileType = getFileTypeInfo(file);
                     
-                    const itemCard = document.createElement('li');
-                    itemCard.className = 'item-card';
-                    itemCard.dataset.itemKey = JSON.stringify(file.key);
-                    itemCard.dataset.storeName = file.storeName;
-                    itemCard.innerHTML = `
+                    const item = document.createElement('li');
+                    item.className = 'item-card';
+                    item.dataset.itemKey = JSON.stringify(file.key);
+                    item.dataset.storeName = file.storeName;
+                    item.innerHTML = `
                         <div class="item-icon material-icons">insert_drive_file</div>
                         <div class="item-name">${displayName}</div>
                         <div class="item-meta">${fileType}</div>
@@ -1028,7 +958,7 @@
                         </div>
                     `;
                     
-                    itemCard.addEventListener('click', (e) => {
+                    item.addEventListener('click', (e) => {
                         // Only preview if not clicking on action buttons
                         if (!e.target.closest('.item-action-btn')) {
                             previewItem(file);
@@ -1036,15 +966,17 @@
                     });
                     
                     // Add delete handler
-                    itemCard.querySelector('.delete-item').addEventListener('click', (e) => {
+                    item.querySelector('.delete-item').addEventListener('click', (e) => {
                         e.stopPropagation();
                         deleteItem(file);
                     });
                     
-                    list.appendChild(itemCard);
+                    list.appendChild(item);
                 });
                 
                 mainContent.appendChild(list);
+                
+                // Initialize upload functionality
                 initUpload();
             }
 
@@ -1086,6 +1018,8 @@
                 });
                 
                 mainContent.appendChild(list);
+                
+                // Initialize upload functionality
                 initUpload();
             }
 
@@ -1140,6 +1074,9 @@
                     updateStatus(`Error opening database: ${event.target.error}`, true);
                     console.error('Error opening database:', event.target.error);
                 };
+                
+                // Initialize upload functionality
+                initUpload();
             }
 
             function renderStoreItems(items) {
@@ -1151,26 +1088,19 @@
                             <span class="material-icons empty-icon">info</span>
                             <div>No items found in this object store</div>
                         </div>
-                        <div class="upload-container" style="display: block;">
-                            <div class="upload-area" id="dropArea">
-                                <p>Drag & drop files here or click to select</p>
-                                <input type="file" id="fileInput" style="display: none;" multiple>
-                                <button class="action-btn" id="selectFilesBtn">
-                                    <span class="material-icons">upload</span>
-                                    Select Files
-                                </button>
-                            </div>
-                            <div class="progress-bar" id="progressContainer" style="display: none;">
-                                <div class="progress" id="progressBar"></div>
-                            </div>
+                        <div class="upload-container">
+                            <button class="upload-btn" id="upload-files-btn">
+                                <span class="material-icons">upload</span>
+                                Upload Files
+                            </button>
+                            <input type="file" id="file-upload" class="upload-input" multiple>
                         </div>
                     `;
                     
-                    // Reattach event listeners for the upload area
-                    document.getElementById('selectFilesBtn').addEventListener('click', () => {
+                    // Add event listener for upload button
+                    document.getElementById('upload-files-btn').addEventListener('click', () => {
                         fileInput.click();
                     });
-                    
                     return;
                 }
                 
@@ -1237,6 +1167,8 @@
                 });
                 
                 mainContent.appendChild(list);
+                
+                // Initialize upload functionality
                 initUpload();
             }
 
@@ -1472,6 +1404,119 @@
                     updateStatus(`Error opening database: ${event.target.error}`, true);
                     console.error('Error opening database:', event.target.error);
                 };
+            }
+
+            /* FILE UPLOAD FUNCTIONALITY */
+            function initUpload() {
+                uploadContainer.style.display = state.currentStore ? 'block' : 'none';
+            }
+
+            function handleFileSelection() {
+                if (fileInput.files.length > 0) {
+                    handleFiles(fileInput.files);
+                }
+            }
+
+            async function handleFiles(files) {
+                if (!state.currentDb || !state.currentStore) {
+                    updateStatus("Please select a database and object store first", true);
+                    return;
+                }
+
+                // Reset UI
+                progressBar.style.width = '0%';
+                progressContainer.style.display = 'block';
+                uploadStatus.textContent = `Preparing to upload ${files.length} file(s)...`;
+                
+                try {
+                    // Open database and start transaction
+                    const db = await openDatabase(state.currentDb);
+                    const transaction = db.transaction(state.currentStore, 'readwrite');
+                    const store = transaction.objectStore(state.currentStore);
+                    
+                    // Process files sequentially
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        const fileNumber = i + 1;
+                        
+                        try {
+                            // Update status
+                            uploadStatus.textContent = `Uploading ${file.name} (${fileNumber} of ${files.length})...`;
+                            updateStatus(`Uploading ${file.name} (${fileNumber}/${files.length})...`);
+                            
+                            // Read file
+                            const fileData = await readFileAsArrayBuffer(file);
+                            
+                            // Store in IndexedDB
+                            await putFileInStore(store, file.name, fileData);
+                            
+                            // Update progress
+                            const progress = (fileNumber / files.length) * 100;
+                            progressBar.style.width = `${progress}%`;
+                            
+                        } catch (error) {
+                            // Handle individual file errors without stopping the entire process
+                            console.error(`Error processing ${file.name}:`, error);
+                            updateStatus(`Error with ${file.name}: ${error.message}`, true);
+                            continue;
+                        }
+                    }
+                    
+                    // Transaction completion
+                    transaction.oncomplete = () => {
+                        db.close();
+                        uploadStatus.textContent = `Successfully uploaded ${files.length} file(s)`;
+                        updateStatus(`Upload complete: ${files.length} file(s) added to ${state.currentStore}`);
+                        
+                        // Refresh the current view
+                        setTimeout(() => {
+                            progressContainer.style.display = 'none';
+                            if (state.currentStore.includes('/')) {
+                                openPathAsFolder(state.currentStore.split('/').slice(0, -1).join('/'));
+                            } else {
+                                openObjectStore(state.currentStore);
+                            }
+                        }, 500);
+                    };
+                    
+                    transaction.onerror = (event) => {
+                        console.error('Transaction error:', event.target.error);
+                        updateStatus(`Upload transaction failed: ${event.target.error.message}`, true);
+                        uploadStatus.textContent = 'Upload failed';
+                    };
+                    
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    updateStatus(`Upload failed: ${error.message}`, true);
+                    uploadStatus.textContent = 'Upload failed';
+                    progressContainer.style.display = 'none';
+                }
+            }
+
+            // Helper functions for file operations
+            function openDatabase(dbName) {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(dbName);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            function readFileAsArrayBuffer(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = () => reject(new Error('Failed to read file'));
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+
+            function putFileInStore(store, key, data) {
+                return new Promise((resolve, reject) => {
+                    const request = store.put(data, key);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
             }
 
             function updateBreadcrumb(items) {
