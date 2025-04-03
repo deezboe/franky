@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IndexedDB Explorer</title>
+    <title>IndexedDB Explorer with File Upload</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css" rel="stylesheet">
     <style>
@@ -442,7 +442,7 @@
             <span class="material-icons empty-icon">folder_open</span>
             <div>Select a database or object store to view contents</div>
         </div>
-        
+
         <!-- Upload Container -->
         <div class="upload-container" id="upload-container">
             <div class="upload-area" id="drop-area">
@@ -522,23 +522,10 @@
             selectFilesBtn.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', handleFileSelection);
             
-            // Drag and drop handlers
-            dropArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropArea.style.backgroundColor = 'rgba(98, 0, 238, 0.08)';
-            });
-            
-            dropArea.addEventListener('dragleave', () => {
-                dropArea.style.backgroundColor = '';
-            });
-            
-            dropArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropArea.style.backgroundColor = '';
-                if (e.dataTransfer.files.length > 0) {
-                    handleFiles(e.dataTransfer.files);
-                }
-            });
+            // Drag and drop event listeners
+            dropArea.addEventListener('dragover', handleDragOver);
+            dropArea.addEventListener('dragleave', handleDragLeave);
+            dropArea.addEventListener('drop', handleDrop);
 
             // Functions
             function refreshDatabases() {
@@ -679,8 +666,6 @@
                 renderTreeItems(treeContainer, state.pathStructure);
                 
                 mainContent.appendChild(treeContainer);
-                
-                // Initialize upload functionality
                 initUpload();
             }
 
@@ -823,11 +808,9 @@
                         // Render the contents
                         renderPathContents(Object.values(pathLevels), fileItems);
                         updateStatus(`Showing contents of ${path}`);
+                        initUpload();
                     });
                 };
-                
-                // Initialize upload functionality
-                initUpload();
             }
 
             function openPathAsFile(path) {
@@ -884,8 +867,6 @@
                         }
                     };
                 };
-                
-                // Initialize upload functionality
                 initUpload();
             }
 
@@ -896,19 +877,8 @@
                 header.className = 'content-header';
                 header.innerHTML = `
                     <div class="content-title">${state.currentStore || state.currentDb}</div>
-                    <div class="content-actions">
-                        <button class="action-btn" id="upload-files-btn">
-                            <span class="material-icons">upload</span>
-                            Upload Files
-                        </button>
-                    </div>
                 `;
                 mainContent.appendChild(header);
-                
-                // Add event listener for upload button
-                document.getElementById('upload-files-btn').addEventListener('click', () => {
-                    fileInput.click();
-                });
                 
                 if (folders.length === 0 && files.length === 0) {
                     mainContent.innerHTML += `
@@ -943,11 +913,11 @@
                     const displayName = extractFilename(file.key);
                     const fileType = getFileTypeInfo(file);
                     
-                    const item = document.createElement('li');
-                    item.className = 'item-card';
-                    item.dataset.itemKey = JSON.stringify(file.key);
-                    item.dataset.storeName = file.storeName;
-                    item.innerHTML = `
+                    const itemCard = document.createElement('li');
+                    itemCard.className = 'item-card';
+                    itemCard.dataset.itemKey = JSON.stringify(file.key);
+                    itemCard.dataset.storeName = file.storeName;
+                    itemCard.innerHTML = `
                         <div class="item-icon material-icons">insert_drive_file</div>
                         <div class="item-name">${displayName}</div>
                         <div class="item-meta">${fileType}</div>
@@ -958,25 +928,21 @@
                         </div>
                     `;
                     
-                    item.addEventListener('click', (e) => {
-                        // Only preview if not clicking on action buttons
+                    itemCard.addEventListener('click', (e) => {
                         if (!e.target.closest('.item-action-btn')) {
                             previewItem(file);
                         }
                     });
                     
-                    // Add delete handler
-                    item.querySelector('.delete-item').addEventListener('click', (e) => {
+                    itemCard.querySelector('.delete-item').addEventListener('click', (e) => {
                         e.stopPropagation();
                         deleteItem(file);
                     });
                     
-                    list.appendChild(item);
+                    list.appendChild(itemCard);
                 });
                 
                 mainContent.appendChild(list);
-                
-                // Initialize upload functionality
                 initUpload();
             }
 
@@ -1018,8 +984,6 @@
                 });
                 
                 mainContent.appendChild(list);
-                
-                // Initialize upload functionality
                 initUpload();
             }
 
@@ -1074,9 +1038,6 @@
                     updateStatus(`Error opening database: ${event.target.error}`, true);
                     console.error('Error opening database:', event.target.error);
                 };
-                
-                // Initialize upload functionality
-                initUpload();
             }
 
             function renderStoreItems(items) {
@@ -1088,19 +1049,7 @@
                             <span class="material-icons empty-icon">info</span>
                             <div>No items found in this object store</div>
                         </div>
-                        <div class="upload-container">
-                            <button class="upload-btn" id="upload-files-btn">
-                                <span class="material-icons">upload</span>
-                                Upload Files
-                            </button>
-                            <input type="file" id="file-upload" class="upload-input" multiple>
-                        </div>
                     `;
-                    
-                    // Add event listener for upload button
-                    document.getElementById('upload-files-btn').addEventListener('click', () => {
-                        fileInput.click();
-                    });
                     return;
                 }
                 
@@ -1109,10 +1058,6 @@
                 header.innerHTML = `
                     <div class="content-title">Items in ${state.currentStore}</div>
                     <div class="content-actions">
-                        <button class="action-btn" id="upload-files-btn">
-                            <span class="material-icons">upload</span>
-                            Upload Files
-                        </button>
                         <button class="action-btn delete" id="delete-store-btn">
                             <span class="material-icons">delete</span>
                             Delete Store
@@ -1120,11 +1065,6 @@
                     </div>
                 `;
                 mainContent.appendChild(header);
-                
-                // Add event listeners for buttons
-                document.getElementById('upload-files-btn').addEventListener('click', () => {
-                    fileInput.click();
-                });
                 
                 document.getElementById('delete-store-btn').addEventListener('click', deleteCurrentStore);
                 
@@ -1151,13 +1091,11 @@
                     `;
                     
                     itemCard.addEventListener('click', (e) => {
-                        // Only preview if not clicking on action buttons
                         if (!e.target.closest('.item-action-btn')) {
                             previewItem(item);
                         }
                     });
                     
-                    // Add delete handler
                     itemCard.querySelector('.delete-item').addEventListener('click', (e) => {
                         e.stopPropagation();
                         deleteItem(item);
@@ -1167,15 +1105,13 @@
                 });
                 
                 mainContent.appendChild(list);
-                
-                // Initialize upload functionality
                 initUpload();
             }
 
             function extractFilename(key) {
                 if (typeof key === 'string' && key.includes('/')) {
                     const parts = key.split('/');
-                    return parts[parts.length - 1]; // Return the last segment as filename
+                    return parts[parts.length - 1];
                 }
                 return formatKey(key);
             }
@@ -1417,6 +1353,23 @@
                 }
             }
 
+            function handleDragOver(e) {
+                e.preventDefault();
+                dropArea.style.backgroundColor = 'rgba(98, 0, 238, 0.08)';
+            }
+
+            function handleDragLeave() {
+                dropArea.style.backgroundColor = '';
+            }
+
+            function handleDrop(e) {
+                e.preventDefault();
+                dropArea.style.backgroundColor = '';
+                if (e.dataTransfer.files.length > 0) {
+                    handleFiles(e.dataTransfer.files);
+                }
+            }
+
             async function handleFiles(files) {
                 if (!state.currentDb || !state.currentStore) {
                     updateStatus("Please select a database and object store first", true);
@@ -1430,7 +1383,12 @@
                 
                 try {
                     // Open database and start transaction
-                    const db = await openDatabase(state.currentDb);
+                    const db = await new Promise((resolve, reject) => {
+                        const request = indexedDB.open(state.currentDb);
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = (e) => reject(e.target.error);
+                    });
+
                     const transaction = db.transaction(state.currentStore, 'readwrite');
                     const store = transaction.objectStore(state.currentStore);
                     
@@ -1445,10 +1403,19 @@
                             updateStatus(`Uploading ${file.name} (${fileNumber}/${files.length})...`);
                             
                             // Read file
-                            const fileData = await readFileAsArrayBuffer(file);
+                            const fileData = await new Promise((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = (e) => resolve(e.target.result);
+                                reader.onerror = () => reject(new Error('Failed to read file'));
+                                reader.readAsArrayBuffer(file);
+                            });
                             
                             // Store in IndexedDB
-                            await putFileInStore(store, file.name, fileData);
+                            await new Promise((resolve, reject) => {
+                                const request = store.put(fileData, file.name);
+                                request.onsuccess = () => resolve();
+                                request.onerror = (e) => reject(e.target.error);
+                            });
                             
                             // Update progress
                             const progress = (fileNumber / files.length) * 100;
@@ -1491,32 +1458,6 @@
                     uploadStatus.textContent = 'Upload failed';
                     progressContainer.style.display = 'none';
                 }
-            }
-
-            // Helper functions for file operations
-            function openDatabase(dbName) {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open(dbName);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-            }
-
-            function readFileAsArrayBuffer(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(e.target.result);
-                    reader.onerror = () => reject(new Error('Failed to read file'));
-                    reader.readAsArrayBuffer(file);
-                });
-            }
-
-            function putFileInStore(store, key, data) {
-                return new Promise((resolve, reject) => {
-                    const request = store.put(data, key);
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
-                });
             }
 
             function updateBreadcrumb(items) {
